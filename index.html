@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadslandbouw Arnhem - Kruidenhoek Registratie</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #1b5e20;
+            --bg-color: #f4f6f4;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 8px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        header h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.4rem;
+        }
+        header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.85rem;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        textarea {
+            resize: vertical;
+            height: 90px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+        .status-msg {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .success { background: #e8f5e9; color: var(--primary-dark); }
+        .error { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Stadslandbouw Arnhem</h1>
+        <p>Kruidenhoek Veldregistratie</p>
+    </header>
+
+    <div class="card">
+        <form id="kruidenForm">
+            <label for="naam">Je Naam:</label>
+            <input type="text" id="naam" name="naam" required placeholder="Bijv. Jan de Vries">
+
+            <label for="vak">Beplantingsvak:</label>
+            <select id="vak" name="vak" required>
+                <option value="">-- Selecteer vak --</option>
+                <option value="K1">Vak K1</option>
+                <option value="K2">Vak K2</option>
+                <option value="K3">Vak K3</option>
+                <option value="K4">Vak K4</option>
+                <option value="K5">Vak K5</option>
+                <option value="K6">Vak K6</option>
+            </select>
+
+            <label for="kruidsoort">Kruidensoort:</label>
+            <input type="text" id="kruidsoort" name="kruidsoort" required placeholder="Bijv. Basilicum, Bieslook, Munt">
+
+            <label for="actie">Type Actie / Onderhoud:</label>
+            <select id="actie" name="actie" required>
+                <option value="Oogst">Oogst</option>
+                <option value="Snoei / Terugsnoeien">Snoei / Terugsnoeien</option>
+                <option value="Wieden / Schoonmaken">Wieden / Schoonmaken</option>
+                <option value="Voeding / Compost">Voeding / Compost</option>
+                <option value="Waarneming / Ziekte">Waarneming / Ziekte</option>
+                <option value="Plant / Aanplant">Plant / Aanplant</option>
+            </select>
+
+            <label for="ziekte">Ziekte of Waarneming (optioneel):</label>
+            <input type="text" id="ziekte" name="ziekte" placeholder="Bijv. Geen bijzonderheden, lichte slakkenvraat">
+
+            <label for="notities">Notities / Opmerkingen:</label>
+            <textarea id="notities" name="notities" placeholder="Hoe staat de plant erbij? Extra details..."></textarea>
+
+            <button type="submit" id="submitBtn">Opslaan & Verzenden</button>
+        </form>
+
+        <div id="statusMsg" class="status-msg"></div>
+    </div>
+</div>
+
+<script>
+    // Hier komt straks de koppeling met je Google Apps Script Web App URL
+    const WEB_APP_URL = "JOUW_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HIER";
+
+    document.getElementById('kruidenForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const statusDiv = document.getElementById('statusMsg');
+        
+        btn.disabled = true;
+        btn.textContent = "Even geduld, verzenden...";
+        
+        const formData = {
+            naam: document.getElementById('naam').value,
+            vak: document.getElementById('vak').value,
+            kruidsoort: document.getElementById('kruidsoort').value,
+            actie: document.getElementById('actie').value,
+            ziekte: document.getElementById('ziekte').value,
+            notities: document.getElementById('notities').value
+        };
+
+        // Als test of via Apps Script Web App:
+        // We sturen dit naar je Google Sheet web-app endpoint
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        }).then(() => {
+            statusDiv.textContent = "Succes! Gegevens zijn verzonden naar de Kruidenhoek.";
+            statusDiv.className = "status-msg success";
+            statusDiv.style.display = "block";
+            document.getElementById('kruidenForm').reset();
+            btn.disabled = false;
+            btn.textContent = "Opslaan & Verzenden";
+        }).catch(err => {
+            statusDiv.textContent = "Fout bij verzenden: " + err;
+            statusDiv.className = "status-msg error";
+            statusDiv.style.display = "block";
+            btn.disabled = false;
+            btn.textContent = "Opslaan & Verzenden";
+        });
+    });
+</script>
+
+</body>
+</html>
