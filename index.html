@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stadslandbouw Arnhem - Kruidenhoek Registratie</title>
+    <title>Stadslandbouw Arnhem - Kruidenhoek</title>
     <style>
         :root {
             --primary: #2e7d32;
@@ -21,7 +21,7 @@
             padding: 10px;
         }
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             padding: 10px;
         }
@@ -33,15 +33,31 @@
             text-align: center;
             margin-bottom: 15px;
         }
-        header h1 {
-            margin: 0 0 5px 0;
-            font-size: 1.4rem;
+        header h1 { margin: 0 0 5px 0; font-size: 1.4rem; }
+        header p { margin: 0; opacity: 0.9; font-size: 0.85rem; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
         }
-        header p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 0.85rem;
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #ccc;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
         }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+
         .card {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
@@ -65,11 +81,8 @@
             box-sizing: border-box;
             font-size: 1rem;
         }
-        textarea {
-            resize: vertical;
-            height: 90px;
-        }
-        button {
+        textarea { resize: vertical; height: 80px; }
+        button.action-btn {
             background-color: var(--primary);
             color: white;
             border: none;
@@ -79,11 +92,20 @@
             font-size: 1rem;
             font-weight: bold;
             width: 100%;
-            transition: background 0.2s;
         }
-        button:hover {
-            background-color: var(--primary-dark);
+        button.action-btn:hover { background-color: var(--primary-dark); }
+        
+        .wiki-result {
+            background: #f9fbf9;
+            border: 1px solid #c8e6c9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
         }
+        .wiki-result h3 { color: var(--primary-dark); margin-top: 0; }
+        .wiki-item { margin-bottom: 8px; font-size: 0.9rem; }
+        .wiki-item strong { color: #555; }
+        
         .status-msg {
             margin-top: 15px;
             padding: 10px;
@@ -101,58 +123,145 @@
 <div class="container">
     <header>
         <h1>Stadslandbouw Arnhem</h1>
-        <p>Kruidenhoek Veldregistratie</p>
+        <p>Kruidenhoek Wiki & Veldregistratie</p>
     </header>
 
-    <div class="card">
-        <form id="kruidenForm">
-            <label for="naam">Je Naam:</label>
-            <input type="text" id="naam" name="naam" required placeholder="Bijv. Jan de Vries">
+    <!-- Navigatie Knoppen (Tabs) -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('wiki')">🔍 Kruid Opzoeken</button>
+        <button class="tab-btn" onclick="switchTab('form')">✍️ Veldinvoer Doen</button>
+    </div>
 
-            <label for="vak">Beplantingsvak:</label>
-            <select id="vak" name="vak" required>
-                <option value="">-- Selecteer vak --</option>
-                <option value="K1">Vak K1</option>
-                <option value="K2">Vak K2</option>
-                <option value="K3">Vak K3</option>
-                <option value="K4">Vak K4</option>
-                <option value="K5">Vak K5</option>
-                <option value="K6">Vak K6</option>
-            </select>
+    <!-- SECTIE 1: WIKI / OPROEPEN VAN DETAILS -->
+    <div id="wiki-section" class="section active">
+        <div class="card">
+            <label for="zoekKruid">Zoek een kruidensoort:</label>
+            <input type="text" id="zoekKruid" placeholder="Bijv. Rozemarijn, Basilicum, Munt..." onkeyup="zoekKruidInDatabase()">
+            
+            <div id="wikiContent" class="wiki-result" style="display: none;">
+                <h3 id="resNaam">--</h3>
+                <div class="wiki-item"><strong>Latijnse naam:</strong> <span id="resLat">--</span></div>
+                <div class="wiki-item"><strong>Functie:</strong> <span id="resFunctie">--</span></div>
+                <div class="wiki-item"><strong>Beschrijving:</strong> <span id="resBeschr">--</span></div>
+                <div class="wiki-item"><strong>Ideale standplaats:</strong> <span id="resStand">--</span></div>
+                <div class="wiki-item"><strong>Grondsoort & Voeding:</strong> <span id="resGrond">--</span></div>
+                <div class="wiki-item"><strong>Beste snoeimoment:</strong> <span id="resSnoei">--</span></div>
+                <div class="wiki-item"><strong>Medicinaal / Werking:</strong> <span id="resMed">--</span></div>
+                <div class="wiki-item" style="color: #c62828;"><strong>Waarschuwing / Contra-indicatie:</strong> <span id="resWaarschuwing">--</span></div>
+            </div>
+            <p id="geenResultaat" style="font-style: italic; color: #666; display: none; text-align: center; margin-top: 10px;">Geen kruid gevonden met deze naam.</p>
+        </div>
+    </div>
 
-            <label for="kruidsoort">Kruidensoort:</label>
-            <input type="text" id="kruidsoort" name="kruidsoort" required placeholder="Bijv. Basilicum, Bieslook, Munt">
+    <!-- SECTIE 2: REGISTRATIE FORMULIER -->
+    <div id="form-section" class="section">
+        <div class="card">
+            <form id="kruidenForm">
+                <label for="naam">Je Naam:</label>
+                <input type="text" id="naam" name="naam" required placeholder="Bijv. Jan de Vries">
 
-            <label for="actie">Type Actie / Onderhoud:</label>
-            <select id="actie" name="actie" required>
-                <option value="Oogst">Oogst</option>
-                <option value="Snoei / Terugsnoeien">Snoei / Terugsnoeien</option>
-                <option value="Wieden / Schoonmaken">Wieden / Schoonmaken</option>
-                <option value="Voeding / Compost">Voeding / Compost</option>
-                <option value="Waarneming / Ziekte">Waarneming / Ziekte</option>
-                <option value="Plant / Aanplant">Plant / Aanplant</option>
-            </select>
+                <label for="vak">Beplantingsvak:</label>
+                <select id="vak" name="vak" required>
+                    <option value="">-- Selecteer vak --</option>
+                    <option value="K1">Vak K1</option>
+                    <option value="K2">Vak K2</option>
+                    <option value="K3">Vak K3</option>
+                    <option value="K4">Vak K4</option>
+                    <option value="K5">Vak K5</option>
+                    <option value="K6">Vak K6</option>
+                </select>
 
-            <label for="ziekte">Ziekte of Waarneming (optioneel):</label>
-            <input type="text" id="ziekte" name="ziekte" placeholder="Bijv. Geen bijzonderheden, lichte slakkenvraat">
+                <label for="kruidsoort">Kruidensoort:</label>
+                <input type="text" id="kruidsoort" name="kruidsoort" required placeholder="Bijv. Basilicum, Bieslook">
 
-            <label for="notities">Notities / Opmerkingen:</label>
-            <textarea id="notities" name="notities" placeholder="Hoe staat de plant erbij? Extra details..."></textarea>
+                <label for="actie">Type Actie / Onderhoud:</label>
+                <select id="actie" name="actie" required>
+                    <option value="Oogst">Oogst</option>
+                    <option value="Snoei / Terugsnoeien">Snoei / Terugsnoeien</option>
+                    <option value="Wieden / Schoonmaken">Wieden / Schoonmaken</option>
+                    <option value="Voeding / Compost">Voeding / Compost</option>
+                    <option value="Waarneming / Ziekte">Waarneming / Ziekte</option>
+                    <option value="Plant / Aanplant">Plant / Aanplant</option>
+                </select>
 
-            <button type="submit" id="submitBtn">Opslaan & Verzenden</button>
-        </form>
+                <label for="ziekte">Ziekte of Waarneming (optioneel):</label>
+                <input type="text" id="ziekte" name="ziekte" placeholder="Bijv. Geen bijzonderheden">
 
-        <div id="statusMsg" class="status-msg"></div>
+                <label for="notities">Notities / Opmerkingen:</label>
+                <textarea id="notities" name="notities" placeholder="Extra details..."></textarea>
+
+                <button type="submit" id="submitBtn" class="action-btn">Opslaan & Verzenden</button>
+            </form>
+            <div id="statusMsg" class="status-msg"></div>
+        </div>
     </div>
 </div>
 
 <script>
-    // Hier komt straks de koppeling met je Google Apps Script Web App URL
+    // Voorbeeld database-array direct ingebouwd in de website voor razendsnel opzoeken!
+    const kruidenDatabase = [
+        { naam: "Basilicum", lat: "Ocimum basilicum", functie: "Smaakmaker", beschr: "Aromatische, malse bladgroente met warme smaak", stand: "Zonnig en beschut", grond: "Voedzame, humusrijke grond", snoei: "Nvt (eenjarig), regelmatig toppen", med: "Licht krampstillend en spijsverteringsbevorderend", waarschuwing: "Geen specifieke risico's bij normale culinaire consumptie" },
+        { naam: "Bieslook", lat: "Allium schoenoprasum", functie: "Smaakmaker", beschr: "Vaste plant met holle sprieten en eetbare paarse bloemen", stand: "Zonnig tot halfschaduw", grond: "Voedzaam en vochthoudend", snoei: "Na de bloei strak terugsnijden", med: "Bevordert de eetlust en milde bloeddrukverlagende werking", waarschuwing: "Overmatig gebruik kan lichte maagirritatie geven" },
+        { naam: "Rozemarijn", lat: "Salvia rosmarinus", functie: "Smaakmaker / Medicinaal", beschr: "Groenblijvende, geurige struik met leerachtige naaldjes", stand: "Vol zonlicht, beschut", grond: "Droog, zanderig, kalkrijk", snoei: "In het voorjaar na de vorst lichte vormsnoei", med: "Stimuleert de bloedsomloop, verbetert het geheugen", waarschuwing: "Niet gebruiken bij epilepsie of in hoge doses tijdens zwangerschap" },
+        { naam: "Munt", lat: "Mentha", functie: "Smaakmaker / Medicinaal", beschr: "Sterk geurend, fris kruid met lange ondergrondse uitlopers", stand: "Halfschaduw tot schaduw", grond: "Vochthoudende, humusrijke grond", snoei: "Na de bloei grondig terugsnoeien", med: "Verlicht maag- en darmkrampen, verzacht misselijkheid", waarschuwing: "Vermijd sterke pepermuntolie bij jonge kinderen in het gezicht" },
+        { naam: "Tijm", lat: "Thymus vulgaris", functie: "Smaakmaker / Medicinaal", beschr: "Laag, houtig struikje met minuscule aromatische blaadjes", stand: "Vol zonlicht", grond: "Kalkrijk, zandig, zeer goed doorlatend", snoei: "Na de bloei licht terugsnoeien (niet op oud hout)", med: "Krachtig antiseptisch, slijmoplossend bij verkoudheid", waarschuwing: "Geconcentreerde tijmolie niet onverdund innemen" },
+        { naam: "Salie", lat: "Salvia officinalis", functie: "Smaakmaker / Medicinaal", beschr: "Vaste struik met grijze, fluweelachtige blaadjes", stand: "Zonnig", grond: "Droge, kalkrijke grond", snoei: "Na de bloei en in het voorjaar terugsnoeien", med: "Sterk ontstekingsremmend bij keelpijn, remt transpiratie", waarschuwing: "Niet gebruiken bij borstvoeding, zwangerschap of epilepsie" }
+    ];
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        if(tabName === 'wiki') {
+            document.getElementById('wiki-section').classList.add('active');
+            event.target.classList.add('active');
+        } else {
+            document.getElementById('form-section').classList.add('active');
+            event.target.classList.add('active');
+        }
+    }
+
+    function zoekKruidInDatabase() {
+        const query = document.getElementById('zoekKruid.value').toLowerCase().trim(); // fix hieronder
+    }
+
+    document.getElementById('zoekKruid').addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        const contentBox = document.getElementById('wikiContent');
+        const geenResBox = document.getElementById('geenResultaat');
+
+        if(query.length === 0) {
+            contentBox.style.display = 'none';
+            geenResBox.style.display = 'none';
+            return;
+        }
+
+        const gevonden = kruidenDatabase.find(k => k.naam.toLowerCase().includes(query) || k.lat.toLowerCase().includes(query));
+
+        if(gevonden) {
+            document.getElementById('resNaam').textContent = gevonden.naam;
+            document.getElementById('resLat').textContent = gevonden.lat;
+            document.getElementById('resFunctie').textContent = gevonden.functie;
+            document.getElementById('resBeschr').textContent = gevonden.beschr;
+            document.getElementById('resStand').textContent = gevonden.stand;
+            document.getElementById('resGrond').textContent = gevonden.grond;
+            document.getElementById('resSnoei').textContent = gevonden.snoei;
+            document.getElementById('resMed').textContent = gevonden.med;
+            document.getElementById('resWaarschuwing').textContent = gevonden.waarschuwing;
+
+            contentBox.style.display = 'block';
+            geenResBox.style.display = 'none';
+        } else {
+            contentBox.style.display = 'none';
+            geenResBox.style.display = 'block';
+        }
+    });
+
+    // Formulier verzendlogica (wordt later gekoppeld aan je Google Apps Script Web App URL)
     const WEB_APP_URL = "JOUW_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HIER";
 
     document.getElementById('kruidenForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
         const btn = document.getElementById('submitBtn');
         const statusDiv = document.getElementById('statusMsg');
         
@@ -168,8 +277,6 @@
             notities: document.getElementById('notities').value
         };
 
-        // Als test of via Apps Script Web App:
-        // We sturen dit naar je Google Sheet web-app endpoint
         fetch(WEB_APP_URL, {
             method: 'POST',
             mode: 'no-cors',
