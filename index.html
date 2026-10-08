@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.5)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.6)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -177,11 +177,10 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.5 <span id="headerTimestamp" style="opacity: 0.8;">(8-10-2026 15:55)</span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.6 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
-    <!-- Menu: Wiki staat als eerste voor snelle toegang -->
     <div class="nav-tabs">
       <button class="nav-btn active" data-target="wiki">🔍 Wiki & Zoeken</button>
       <button class="nav-btn" data-target="opmerkingen">💡 Opmerkingen</button>
@@ -287,7 +286,6 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
-      // Stel huidige timestamp in
       const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
       document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
 
@@ -308,7 +306,6 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      // Probeer direct data uit browser cache te laden voor maximale snelheid
       const cachedData = sessionStorage.getItem('kruidenhoek_data');
       const cachedTime = sessionStorage.getItem('kruidenhoek_time');
 
@@ -400,6 +397,11 @@
       let logboekenHtml = '';
 
       plantData.forEach(source => {
+        let sheetName = String(source.sheetName || '').toLowerCase();
+        
+        // ZORG DAT HET WIKI TABBLAD 'KRUIDENHOEK' NIET WORDT GETOOND BIJ DE RUWE REACTIES
+        if (sheetName.includes('kruidenhoek')) return;
+
         let logboek = source.logboek;
         if (!logboek || logboek.length === 0) return;
 
@@ -439,7 +441,7 @@
           });
           logboekenHtml += `</tr>`;
         });
-        logboekenHtml += `</div>`;
+        logboekenHtml += `</table></div>`;
 
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
@@ -496,6 +498,7 @@
         let sheetName = String(source.sheetName || '').toLowerCase();
         let logboek = source.logboek;
         
+        // ZOEK UITSLUITEND IN HET TABBLAD 'KRUIDENHOEK' VOOR DE WIKI
         if (sheetName.includes('kruidenhoek') && logboek && logboek.length > 1) {
           let headers = logboek[0].map(h => String(h).toLowerCase().trim());
           
@@ -517,9 +520,9 @@
             let row = logboek[i];
             let soort = iSoort !== -1 ? String(row[iSoort]) : (String(row[0]) || '');
             let latijn = iLatijn !== -1 ? String(row[iLatijn]) : '';
-            let rowString = row.join(' ').toLowerCase();
 
-            if (query === '' || rowString.includes(query)) {
+            // Als er niets is getypt, tonen we niets of een melding. Als er wel getypt wordt, filteren we exact op plantnaam of latijnse naam.
+            if (query !== '' && (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query))) {
               let beschrijving = iBeschrijving !== -1 ? row[iBeschrijving] : '';
               let standplaats = iStandplaats !== -1 ? row[iStandplaats] : '';
               let snoei = iSnoei !== -1 ? row[iSnoei] : '';
@@ -548,31 +551,12 @@
         }
       });
 
-      let dagboekHtml = '';
-      if (query !== '') {
-        globalPlantData.forEach(source => {
-          let sheetName = String(source.sheetName || '').toLowerCase();
-          if (!sheetName.includes('kruidenhoek')) {
-            let logboek = source.logboek;
-            if (logboek && logboek.length > 1) {
-              for (let i = 1; i < logboek.length; i++) {
-                let row = logboek[i];
-                let rowStr = row.join(' ').toLowerCase();
-                if (rowStr.includes(query)) {
-                  dagboekHtml += `<div class="log-entry" style="font-size: 0.8rem;">📋 ${row.join(' | ')}</div>`;
-                }
-              }
-            }
-          }
-        });
+      if (query === '') {
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven (bijv. Rozemarijn, Tijm) om de wiki-informatie op te halen.</p>';
+        return;
       }
 
-      let finalHtml = wikiHtml;
-      if (dagboekHtml !== '') {
-        finalHtml += `<div style="margin-top: 20px;"><h3 style="font-size: 0.95rem; color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 4px;">📝 Veldnotities & Inzendingen over "${query}"</h3>${dagboekHtml}</div>`;
-      }
-
-      container.innerHTML = finalHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie of notities gevonden voor "${query}".</p>`;
+      container.innerHTML = wikiHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie gevonden voor "${query}".</p>`;
     }
 
     function handleFormSubmit(event) {
