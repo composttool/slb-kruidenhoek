@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.3-WIKI)</title>
+  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.4-WIKI-FIRST)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -92,7 +92,7 @@
     }
     textarea { resize: vertical; height: 90px; }
     
-    .submit-btn {
+    .submit-btn, .action-btn {
       background: var(--primary);
       color: white;
       border: none;
@@ -102,6 +102,9 @@
       border-radius: 6px;
       cursor: pointer;
       width: 100%;
+    }
+    .action-btn {
+      margin-bottom: 15px;
     }
 
     .plant-card {
@@ -174,28 +177,20 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.3)</span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.4)</span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
+    <!-- Menuvolgorde aangepast: Wiki staat nu als eerste -->
     <div class="nav-tabs">
-      <button class="nav-btn active" data-target="opmerkingen">💡 Opmerkingen</button>
-      <button class="nav-btn" data-target="wiki">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn active" data-target="wiki">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn" data-target="opmerkingen">💡 Opmerkingen</button>
       <button class="nav-btn" data-target="veldinvoer">📝 Veldinvoer</button>
       <button class="nav-btn" data-target="logboeken">📁 Alle Reacties</button>
     </div>
 
-    <!-- Tab 1: Actieve Opmerkingen -->
-    <div id="opmerkingen" class="tab-content active">
-      <div class="card">
-        <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
-        <h2>💡 Recente Acties & Veldnotities</h2>
-        <div id="notesContainer" class="loading">Gegevens laden...</div>
-      </div>
-    </div>
-
-    <!-- Tab 2: Wiki & Zoeken -->
-    <div id="wiki" class="tab-content">
+    <!-- Tab 1: Wiki & Zoeken (Startpagina) -->
+    <div id="wiki" class="tab-content active">
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
         <div class="form-group">
@@ -204,6 +199,21 @@
         <div id="wikiContainer">
           <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de officiële database te raadplegen.</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Actieve Opmerkingen -->
+    <div id="opmerkingen" class="tab-content">
+      <div class="card">
+        <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
+        <h2>💡 Recente Acties & Veldnotities</h2>
+        
+        <!-- Knop toegevoegd om het ophalen zelf te starten -->
+        <div id="loadActionContainer">
+          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties ophalen</button>
+        </div>
+
+        <div id="notesContainer"></div>
       </div>
     </div>
 
@@ -264,7 +274,10 @@
     <div id="logboeken" class="tab-content">
       <div class="card">
         <h2>📁 Ruwe Formulier Reacties</h2>
-        <div id="logboekenContainer" class="loading">Reacties laden...</div>
+        <div id="loadActionContainer2">
+          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Alle Reacties</button>
+        </div>
+        <div id="logboekenContainer"></div>
       </div>
     </div>
 
@@ -292,6 +305,7 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
+      // Controleer of er al cache data is opgeslagen in de browser
       const cachedData = sessionStorage.getItem('kruidenhoek_data');
       const cachedTime = sessionStorage.getItem('kruidenhoek_time');
 
@@ -302,15 +316,33 @@
         if (cachedTime) {
           document.getElementById('timestampInfo').textContent = 'Geladen uit cache: ' + cachedTime;
         }
-      } else {
-        loadDashboardData();
+        // Verberg laad-knoppen als er al data is
+        hideLoadButtons();
       }
     });
 
     function forceRefreshData() {
       sessionStorage.removeItem('kruidenhoek_data');
       sessionStorage.removeItem('kruidenhoek_time');
-      loadDashboardData();
+      document.getElementById('notesContainer').innerHTML = '';
+      document.getElementById('logboekenContainer').innerHTML = '';
+      document.getElementById('timestampInfo').textContent = '';
+      showLoadButtons();
+      alert('Cache gewist. Klik op "Laad Opmerkingen" om verse data op te halen.');
+    }
+
+    function hideLoadButtons() {
+      const btn1 = document.getElementById('loadActionContainer');
+      const btn2 = document.getElementById('loadActionContainer2');
+      if (btn1) btn1.style.display = 'none';
+      if (btn2) btn2.style.display = 'none';
+    }
+
+    function showLoadButtons() {
+      const btn1 = document.getElementById('loadActionContainer');
+      const btn2 = document.getElementById('loadActionContainer2');
+      if (btn1) btn1.style.display = 'block';
+      if (btn2) btn2.style.display = 'block';
     }
 
     function switchTab(tabId, btnElement) {
@@ -324,7 +356,10 @@
 
     function loadDashboardData() {
       const notesContainer = document.getElementById('notesContainer');
+      const logboekenContainer = document.getElementById('logboekenContainer');
+      
       notesContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets (even geduld)...</div>';
+      logboekenContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets (even geduld)...</div>';
 
       if (!SCRIPT_URL) return;
 
@@ -339,11 +374,14 @@
 
           displayLogs(data);
           filterWiki();
+          hideLoadButtons();
+
           const timestampInfo = document.getElementById('timestampInfo');
           if (timestampInfo) timestampInfo.textContent = 'Gesynchroniseerd: ' + now;
         })
         .catch(err => {
           notesContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
+          logboekenContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
         });
     }
 
@@ -444,13 +482,12 @@
       const container = document.getElementById('wikiContainer');
       
       if (!globalPlantData || globalPlantData.length === 0) {
-        container.innerHTML = '<p>Gegevens worden geladen...</p>';
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam om te zoeken in de database.</p>';
         return;
       }
 
       let wikiHtml = '';
 
-      // STAP 1: Doorzoek uitsluitend de officiële Wiki-database (Kruidenhoek tabblad)
       globalPlantData.forEach(source => {
         let sheetName = String(source.sheetName || '').toLowerCase();
         let logboek = source.logboek;
@@ -478,7 +515,6 @@
             let latijn = iLatijn !== -1 ? String(row[iLatijn]) : '';
             let rowString = row.join(' ').toLowerCase();
 
-            // Filter specifiek op plantnaam/latijn of algemene match als er getypt wordt
             if (query === '' || rowString.includes(query)) {
               let beschrijving = iBeschrijving !== -1 ? row[iBeschrijving] : '';
               let standplaats = iStandplaats !== -1 ? row[iStandplaats] : '';
@@ -508,7 +544,6 @@
         }
       });
 
-      // STAP 2: Optioneel los veld-dagboek tonen onderaan als er gezocht wordt
       let dagboekHtml = '';
       if (query !== '') {
         globalPlantData.forEach(source => {
@@ -551,7 +586,7 @@
         vak: document.getElementById('vak').value,
         kruidsoort: document.getElementById('kruidsoort').value,
         actie: document.getElementById('actie').value,
-        ziekte: document.getElementById('ziekte'].value,
+        ziekte: document.getElementById('ziekte').value,
         notities: document.getElementById('notities').value,
         file: null
       };
@@ -587,9 +622,9 @@
         
         sessionStorage.removeItem('kruidenhoek_data');
         sessionStorage.removeItem('kruidenhoek_time');
+        showLoadButtons();
 
-        switchTab('opmerkingen', document.querySelector('.nav-btn'));
-        loadDashboardData();
+        switchTab('wiki', document.querySelector('.nav-btn'));
       })
       .catch(err => {
         alert('Fout bij verzenden: ' + err);
