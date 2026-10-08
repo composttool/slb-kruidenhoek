@@ -306,28 +306,73 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      const cachedData = sessionStorage.getItem('kruidenhoek_data');
-      const cachedTime = sessionStorage.getItem('kruidenhoek_time');
-
-      if (cachedData) {
-        globalPlantData = JSON.parse(cachedData);
-        displayLogs(globalPlantData);
-        filterWiki();
-        if (cachedTime) {
-          document.getElementById('timestampInfo').textContent = 'Geladen uit cache: ' + cachedTime;
-        }
-        hideLoadButtons();
-      }
+      // Laad direct het lokale kruideninfo.json bestand voor de Wiki-zoekfunctie
+      fetch('kruideninfo.json')
+        .then(response => {
+          if (!response.ok) throw new Error('Kon kruideninfo.json niet laden');
+          return response.json();
+        })
+        .then(data => {
+          globalPlantData = data;
+          document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
+        })
+        .catch(err => {
+          console.error('Fout bij laden kruideninfo.json:', err);
+          document.getElementById('wikiContainer').innerHTML = '<p style="color: red;">Fout bij laden van kruideninfo.json</p>';
+        });
     });
+
+    function filterWiki() {
+      const searchInputElem = document.getElementById('searchInput');
+      const query = searchInputElem ? searchInputElem.value.toLowerCase().trim() : '';
+      const container = document.getElementById('wikiContainer');
+      
+      if (!globalPlantData || globalPlantData.length === 0) {
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Bezig met laden van de database...</p>';
+        return;
+      }
+
+      if (query === '') {
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven (bijv. Rozemarijn, Tijm) om de wiki-informatie op te halen.</p>';
+        return;
+      }
+
+      let wikiHtml = '';
+
+      globalPlantData.forEach(item => {
+        let soort = String(item.soort || '');
+        let latijn = String(item.latijnseNaam || '');
+        
+        if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
+          wikiHtml += `
+            <div class="plant-card">
+              <div class="plant-title">🌿 ${soort}</div>
+              ${latijn ? `<div class="plant-subtitle">${latijn}${item.functie ? ' — ' + item.functie : ''}</div>` : ''}
+              
+              <div class="plant-info-grid">
+                ${item.omschrijving ? `<div><strong>Beschrijving:</strong> ${item.omschrijving}</div>` : ''}
+                ${item.standplaats ? `<div>☀️ <strong>Standplaats:</strong> ${item.standplaats}</div>` : ''}
+                ${item.snoeimoment ? `<div>✂️ <strong>Snoei:</strong> ${item.snoeimoment}</div>` : ''}
+                ${item.oogstdeel ? `<div>🧺 <strong>Oogst:</strong> ${item.oogstdeel}</div>` : ''}
+                ${item.toepassing ? `<div>💡 <strong>Toepassing:</strong> ${item.toepassing}</div>` : ''}
+              </div>
+              
+              ${item.waarschuwing ? `<div class="warning-box">⚠️ <strong>Waarschuwing:</strong> ${item.waarschuwing}</div>` : ''}
+            </div>
+          `;
+        }
+      });
+
+      container.innerHTML = wikiHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie gevonden voor "${query}".</p>`;
+    }
 
     function forceRefreshData() {
       sessionStorage.removeItem('kruidenhoek_data');
       sessionStorage.removeItem('kruidenhoek_time');
       document.getElementById('notesContainer').innerHTML = '';
       document.getElementById('logboekenContainer').innerHTML = '';
-      document.getElementById('timestampInfo').textContent = '';
       showLoadButtons();
-      alert('Cache gewist. Klik op "Laad Opmerkingen" om verse data op te halen.');
+      alert('Cache voor logboeken gewist.');
     }
 
     function hideLoadButtons() {
@@ -365,18 +410,12 @@
       fetch(SCRIPT_URL)
         .then(response => response.json())
         .then(data => {
-          globalPlantData = data;
           const now = new Date().toLocaleString('nl-NL');
-          
           sessionStorage.setItem('kruidenhoek_data', JSON.stringify(data));
           sessionStorage.setItem('kruidenhoek_time', now);
 
           displayLogs(data);
-          filterWiki();
           hideLoadButtons();
-
-          const timestampInfo = document.getElementById('timestampInfo');
-          if (timestampInfo) timestampInfo.textContent = 'Gesynchroniseerd: ' + now;
         })
         .catch(err => {
           notesContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
@@ -398,8 +437,6 @@
 
       plantData.forEach(source => {
         let sheetName = String(source.sheetName || '').toLowerCase();
-        
-        // ZORG DAT HET WIKI TABBLAD 'KRUIDENHOEK' NIET WORDT GETOOND BIJ DE RUWE REACTIES
         if (sheetName.includes('kruidenhoek')) return;
 
         let logboek = source.logboek;
@@ -480,83 +517,6 @@
 
       notesContainer.innerHTML = allNotesHtml || '<p>Geen recente opmerkingen gevonden.</p>';
       logboekenContainer.innerHTML = logboekenHtml;
-    }
-
-    function filterWiki() {
-      const searchInputElem = document.getElementById('searchInput');
-      const query = searchInputElem ? searchInputElem.value.toLowerCase().trim() : '';
-      const container = document.getElementById('wikiContainer');
-      
-      if (!globalPlantData || globalPlantData.length === 0) {
-        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam om te zoeken in de database.</p>';
-        return;
-      }
-
-      let wikiHtml = '';
-
-      globalPlantData.forEach(source => {
-        let sheetName = String(source.sheetName || '').toLowerCase();
-        let logboek = source.logboek;
-        
-        // ZOEK UITSLUITEND IN HET TABBLAD 'KRUIDENHOEK' VOOR DE WIKI
-        if (sheetName.includes('kruidenhoek') && logboek && logboek.length > 1) {
-          let headers = logboek[0].map(h => String(h).toLowerCase().trim());
-          
-          function colIdx(name) {
-            return headers.findIndex(h => h.includes(name));
-          }
-
-          let iSoort = colIdx('soortnaam');
-          let iLatijn = colIdx('latijnse naam');
-          let iFunctie = colIdx('functie');
-          let iBeschrijving = colIdx('algemene beschrijving');
-          let iStandplaats = colIdx('standplaats');
-          let iSnoei = colIdx('snoei');
-          let iOogst = colIdx('oogst');
-          let iToepassing = colIdx('toepassing');
-          let iWaarschuwing = colIdx('waarschuwing');
-
-          for (let i = 1; i < logboek.length; i++) {
-            let row = logboek[i];
-            let soort = iSoort !== -1 ? String(row[iSoort]) : (String(row[0]) || '');
-            let latijn = iLatijn !== -1 ? String(row[iLatijn]) : '';
-
-            // Als er niets is getypt, tonen we niets of een melding. Als er wel getypt wordt, filteren we exact op plantnaam of latijnse naam.
-            if (query !== '' && (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query))) {
-              let beschrijving = iBeschrijving !== -1 ? row[iBeschrijving] : '';
-              let standplaats = iStandplaats !== -1 ? row[iStandplaats] : '';
-              let snoei = iSnoei !== -1 ? row[iSnoei] : '';
-              let oogst = iOogst !== -1 ? row[iOogst] : '';
-              let toepassing = iToepassing !== -1 ? row[iToepassing] : '';
-              let waarschuwing = iWaarschuwing !== -1 ? row[iWaarschuwing] : '';
-
-              wikiHtml += `
-                <div class="plant-card">
-                  <div class="plant-title">🌿 ${soort}</div>
-                  ${latijn ? `<div class="plant-subtitle">${latijn}${iFunctie !== -1 && row[iFunctie] ? '— ' + row[iFunctie] : ''}</div>` : ''}
-                  
-                  <div class="plant-info-grid">
-                    ${beschrijving ? `<div><strong>Beschrijving:</strong> ${beschrijving}</div>` : ''}
-                    ${standplaats ? `<div>☀️ <strong>Standplaats:</strong> ${standplaats}</div>` : ''}
-                    ${snoei ? `<div>✂️ <strong>Snoei:</strong> ${snoei}</div>` : ''}
-                    ${oogst ? `<div>🧺 <strong>Oogst:</strong> ${oogst}</div>` : ''}
-                    ${toepassing ? `<div>💡 <strong>Toepassing:</strong> ${toepassing}</div>` : ''}
-                  </div>
-                  
-                  ${waarschuwing ? `<div class="warning-box">⚠️ <strong>Waarschuwing:</strong> ${waarschuwing}</div>` : ''}
-                </div>
-              `;
-            }
-          }
-        }
-      });
-
-      if (query === '') {
-        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven (bijv. Rozemarijn, Tijm) om de wiki-informatie op te halen.</p>';
-        return;
-      }
-
-      container.innerHTML = wikiHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie gevonden voor "${query}".</p>`;
     }
 
     function handleFormSubmit(event) {
