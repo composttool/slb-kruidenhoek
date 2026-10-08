@@ -147,8 +147,13 @@
     <!-- Tab 2: Wiki & Zoeken -->
     <div id="wiki" class="tab-content">
       <div class="card">
-        <h2>🔍 Wiki & Planteninformatie</h2>
-        <p>Hier komt de zoekfunctie voor de kruidensoorten en handleidingen.</p>
+        <h2>🔍 Wiki & Zoeken</h2>
+        <div class="form-group">
+          <input type="text" id="searchInput" placeholder="Typ trefwoord, plantnaam of vak (bijv. K1)..." oninput="filterWiki()">
+        </div>
+        <div id="wikiContainer">
+          <p style="color: #666; font-style: italic;">Typ hierboven om direct te zoeken in alle planten en logboeken.</p>
+        </div>
       </div>
     </div>
 
@@ -163,7 +168,17 @@
           </div>
           <div class="form-group">
             <label for="vak">Vak:</label>
-            <input type="text" id="vak" required placeholder="Bijv. K1">
+            <select id="vak" required>
+              <option value="">Selecteer een vak...</option>
+              <option value="K1">K1</option>
+              <option value="K2">K2</option>
+              <option value="K3">K3</option>
+              <option value="K4">K4</option>
+              <option value="K5">K5</option>
+              <option value="K6">K6</option>
+              <option value="K7">K7</option>
+              <option value="K8">K8</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="kruidsoort">Kruidensoort:</label>
@@ -207,6 +222,7 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
+    let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
       loadDashboardData();
@@ -226,7 +242,9 @@
       fetch(SCRIPT_URL)
         .then(response => response.json())
         .then(data => {
+          globalPlantData = data;
           displayLogs(data);
+          filterWiki(); // Initialiseer de wiki weergave
         })
         .catch(err => {
           document.getElementById('notesContainer').innerHTML = '<div style="color: red;">Fout bij ophalen data: ' + err.message + '</div>';
@@ -251,7 +269,6 @@
         if (plant.logboek && plant.logboek.length > 1) {
           let headers = plant.logboek[0].map(h => String(h).toLowerCase().trim());
           
-          // Flexibele / fuzzy matching helperfunctie om kolommen te vinden op basis van trefwoorden
           function findColumnIndex(keywords) {
             for (let i = 0; i < headers.length; i++) {
               let h = headers[i];
@@ -332,6 +349,55 @@
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
+    function filterWiki() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const container = document.getElementById('wikiContainer');
+      
+      if (!globalPlantData || globalPlantData.length === 0) {
+        container.innerHTML = '<p>Gegevens worden geladen...</p>';
+        return;
+      }
+
+      let html = '';
+
+      globalPlantData.forEach(plant => {
+        let plantNaam = plant.plantNaam.toLowerCase();
+        let matchedRows = [];
+
+        if (plant.logboek && plant.logboek.length > 1) {
+          // Zoek in alle rijen van het logboek van deze plant
+          for (let i = 1; i < plant.logboek.length; i++) {
+            let rowString = plant.logboek[i].join(' ').toLowerCase();
+            if (plantNaam.includes(query) || rowString.includes(query) || query === '') {
+              matchedRows.push(plant.logboek[i]);
+            }
+          }
+        }
+
+        // Als de plantnaam zelf matcht of er zijn overeenkomende logboekregels
+        if (plantNaam.includes(query) || matchedRows.length > 0) {
+          html += `
+            <div style="background: #fff; border: 1px solid #d0e1d4; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 1rem;">🌿 ${plant.plantNaam}</h3>
+          `;
+
+          if (matchedRows.length > 0) {
+            html += `<ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #444;">`;
+            matchedRows.forEach(row => {
+              html += `<li>${row.join(' | ')}</li>`;
+            });
+            html += `</ul>`;
+          } else {
+            html += `<p style="margin: 0; font-size: 0.85rem; color: #666; font-style: italic;">Geen specifieke logboekregels die matchen, plantnaam komt overeen.</p>`;
+          }
+
+          html += `</div>`;
+        }
+      });
+
+      container.innerHTML = html || '<p style="color: #666; font-style: italic;">Geen resultaten gevonden voor je zoekopdracht.</p>';
+    }
+
     function handleFormSubmit(event) {
       event.preventDefault();
       
@@ -342,35 +408,29 @@
       const fileInput = document.getElementById('foto');
       const file = fileInput.files[0];
 
+      const payload = {
+        naam: document.getElementById('naam').value,
+        vak: document.getElementById('vak').value,
+        kruidsoort: document.getElementById('kruidsoort').value,
+        actie: document.getElementById('actie').value,
+        ziekte: document.getElementById('ziekte').value,
+        notities: document.getElementById('notities').value,
+        file: null
+      };
+
       if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-          const base64Data = e.target.result.split(',')[1];
-          sendDataToScript({
-            naam: document.getElementById('naam').value,
-            vak: document.getElementById('vak').value,
-            kruidsoort: document.getElementById('kruidsoort').value,
-            actie: document.getElementById('actie').value,
-            ziekte: document.getElementById('ziekte').value,
-            notities: document.getElementById('notities').value,
-            file: {
-              data: base64Data,
-              name: file.name,
-              type: file.type
-            }
-          });
+          payload.file = {
+            data: e.target.result.split(',')[1],
+            name: file.name,
+            type: file.type
+          };
+          sendDataToScript(payload);
         };
         reader.readAsDataURL(file);
       } else {
-        sendDataToScript({
-          naam: document.getElementById('naam').value,
-          vak: document.getElementById('vak').value,
-          kruidsoort: document.getElementById('kruidsoort').value,
-          actie: document.getElementById('actie').value,
-          ziekte: document.getElementById('ziekte').value,
-          notities: document.getElementById('notities').value,
-          file: null
-        });
+        sendDataToScript(payload);
       }
     }
 
