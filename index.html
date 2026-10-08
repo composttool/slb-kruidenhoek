@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.2-FAST)</title>
+  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.3-WIKI)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -113,21 +113,21 @@
       margin-bottom: 12px;
     }
     .plant-title {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       font-weight: bold;
       color: var(--primary);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     .plant-subtitle {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-style: italic;
-      color: #666;
+      color: #555;
       margin-bottom: 8px;
     }
     .plant-info-grid {
       font-size: 0.85rem;
       display: grid;
-      gap: 4px;
+      gap: 6px;
       margin-bottom: 8px;
     }
     .warning-box {
@@ -174,7 +174,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.2)</span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.3)</span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
@@ -197,12 +197,12 @@
     <!-- Tab 2: Wiki & Zoeken -->
     <div id="wiki" class="tab-content">
       <div class="card">
-        <h2>🔍 Planten Wiki & Veld-Dagboek</h2>
+        <h2>🔍 Planten Wiki Database</h2>
         <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam of vak (bijv. Rozemarijn, K1)...">
+          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Tijm, Rozemarijn, Munt)...">
         </div>
         <div id="wikiContainer">
-          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om te zoeken.</p>
+          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de officiële database te raadplegen.</p>
         </div>
       </div>
     </div>
@@ -275,7 +275,6 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
-      // Directe klik-functionaliteit voor tabs
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const targetId = this.getAttribute('data-target');
@@ -293,7 +292,6 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      // Laad data direct uit cache indien aanwezig
       const cachedData = sessionStorage.getItem('kruidenhoek_data');
       const cachedTime = sessionStorage.getItem('kruidenhoek_time');
 
@@ -450,8 +448,9 @@
         return;
       }
 
-      let html = '';
+      let wikiHtml = '';
 
+      // STAP 1: Doorzoek uitsluitend de officiële Wiki-database (Kruidenhoek tabblad)
       globalPlantData.forEach(source => {
         let sheetName = String(source.sheetName || '').toLowerCase();
         let logboek = source.logboek;
@@ -475,12 +474,12 @@
 
           for (let i = 1; i < logboek.length; i++) {
             let row = logboek[i];
+            let soort = iSoort !== -1 ? String(row[iSoort]) : (String(row[0]) || '');
+            let latijn = iLatijn !== -1 ? String(row[iLatijn]) : '';
             let rowString = row.join(' ').toLowerCase();
 
-            if (rowString.includes(query) || query === '') {
-              let soort = iSoort !== -1 ? row[iSoort] : (row[0] || 'Onbekend');
-              let latijn = iLatijn !== -1 ? row[iLatijn] : '';
-              let functie = iFunctie !== -1 ? row[iFunctie] : '';
+            // Filter specifiek op plantnaam/latijn of algemene match als er getypt wordt
+            if (query === '' || rowString.includes(query)) {
               let beschrijving = iBeschrijving !== -1 ? row[iBeschrijving] : '';
               let standplaats = iStandplaats !== -1 ? row[iStandplaats] : '';
               let snoei = iSnoei !== -1 ? row[iSnoei] : '';
@@ -488,10 +487,10 @@
               let toepassing = iToepassing !== -1 ? row[iToepassing] : '';
               let waarschuwing = iWaarschuwing !== -1 ? row[iWaarschuwing] : '';
 
-              html += `
+              wikiHtml += `
                 <div class="plant-card">
                   <div class="plant-title">🌿 ${soort}</div>
-                  ${latijn ? `<div class="plant-subtitle">${latijn}${functie ? '— ' + functie : ''}</div>` : ''}
+                  ${latijn ? `<div class="plant-subtitle">${latijn}${iFunctie !== -1 && row[iFunctie] ? '— ' + row[iFunctie] : ''}</div>` : ''}
                   
                   <div class="plant-info-grid">
                     ${beschrijving ? `<div><strong>Beschrijving:</strong> ${beschrijving}</div>` : ''}
@@ -509,6 +508,7 @@
         }
       });
 
+      // STAP 2: Optioneel los veld-dagboek tonen onderaan als er gezocht wordt
       let dagboekHtml = '';
       if (query !== '') {
         globalPlantData.forEach(source => {
@@ -528,11 +528,12 @@
         });
       }
 
+      let finalHtml = wikiHtml;
       if (dagboekHtml !== '') {
-        html += `<div style="margin-top: 15px;"><h3 style="font-size: 0.95rem; color: #2e7d32;">📁 Veld-Dagboek Historie</h3>${dagboekHtml}</div>`;
+        finalHtml += `<div style="margin-top: 20px;"><h3 style="font-size: 0.95rem; color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 4px;">📝 Veldnotities & Inzendingen over "${query}"</h3>${dagboekHtml}</div>`;
       }
 
-      container.innerHTML = html || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen plantinfo of dagboeken gevonden voor "${query}".</p>`;
+      container.innerHTML = finalHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie of notities gevonden voor "${query}".</p>`;
     }
 
     function handleFormSubmit(event) {
@@ -550,7 +551,7 @@
         vak: document.getElementById('vak').value,
         kruidsoort: document.getElementById('kruidsoort').value,
         actie: document.getElementById('actie').value,
-        ziekte: document.getElementById('ziekte').value,
+        ziekte: document.getElementById('ziekte'].value,
         notities: document.getElementById('notities').value,
         file: null
       };
