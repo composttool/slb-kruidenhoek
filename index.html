@@ -107,7 +107,6 @@
         .wiki-item { margin-bottom: 8px; font-size: 0.9rem; }
         .wiki-item strong { color: #555; }
         
-        /* Stijlen voor de plantenlijst & logboek */
         .plant-list-item {
             padding: 10px 12px;
             background: #f1f8f1;
@@ -136,6 +135,17 @@
         }
         .log-table th { background-color: #e8f5e9; color: var(--primary-dark); }
 
+        .link-btn {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .link-btn:hover { background-color: #115293; }
+
         .status-msg {
             margin-top: 15px;
             padding: 10px;
@@ -158,16 +168,16 @@
 
     <!-- Navigatie Knoppen (Tabs) -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('wiki', event)">🔍 Wiki</button>
+        <button class="tab-btn active" onclick="switchTab('wiki', event)">🔍 Wiki & Zoeken</button>
         <button class="tab-btn" onclick="switchTab('form', event)">✍️ Veldinvoer</button>
         <button class="tab-btn" onclick="switchTab('logs', event)">📂 Plant Logboeken</button>
     </div>
 
-    <!-- SECTIE 1: WIKI -->
+    <!-- SECTIE 1: WIKI & ZOEKKEN -->
     <div id="wiki-section" class="section active">
         <div class="card">
-            <label for="zoekKruid">Zoek een kruidensoort:</label>
-            <input type="text" id="zoekKruid" placeholder="Bijv. Rozemarijn, Basilicum, Munt...">
+            <label for="zoekKruid">Zoek een kruid of plant:</label>
+            <input type="text" id="zoekKruid" placeholder="Typ om te zoeken in wiki en planten...">
             
             <div id="wikiContent" class="wiki-result" style="display: none;">
                 <h3 id="resNaam">--</h3>
@@ -180,7 +190,7 @@
                 <div class="wiki-item"><strong>Medicinaal / Werking:</strong> <span id="resMed">--</span></div>
                 <div class="wiki-item" style="color: #c62828;"><strong>Waarschuwing:</strong> <span id="resWaarschuwing">--</span></div>
             </div>
-            <p id="geenResultaat" style="font-style: italic; color: #666; display: none; text-align: center; margin-top: 10px;">Geen kruid gevonden.</p>
+            <p id="geenResultaat" style="font-style: italic; color: #666; display: none; text-align: center; margin-top: 10px;">Geen resultaten gevonden.</p>
         </div>
     </div>
 
@@ -231,12 +241,12 @@
     <div id="logs-section" class="section">
         <div class="card">
             <h3 style="margin-top:0; color:var(--primary-dark);">Planttabbladen & Dagboeken</h3>
-            <p style="font-size:0.85rem; color:#666;">Klik op een plant om het logboek uit de sheet in te zien:</p>
+            <p style="font-size:0.85rem; color:#666;">Klik op een plant of gebruik de INDEX om het logboek in te zien:</p>
             
             <button class="action-btn" onclick="laadPlantData()" style="margin-bottom: 15px; font-size: 0.9rem; padding: 8px;">🔄 Ververs Plantenlijst</button>
             
             <div id="plantenLijstContainer">
-                <p style="text-style: italic; color: #666;">Klik op 'Ververs Plantenlijst' om data uit de Google Sheet te laden.</p>
+                <p style="font-style: italic; color: #666;">Klik op 'Ververs Plantenlijst' om data uit de Google Sheet te laden.</p>
             </div>
             
             <div id="enkelLogboekContainer" style="display: none; margin-top: 15px;">
@@ -272,6 +282,7 @@
         event.target.classList.add('active');
     }
 
+    // Live Zoekfunctie
     document.getElementById('zoekKruid').addEventListener('input', function(e) {
         const query = e.target.value.toLowerCase().trim();
         const contentBox = document.getElementById('wikiContent');
@@ -304,10 +315,9 @@
         }
     });
 
-    // VERVANG ONDERSTAANDE URL MET JOUW GOOGLE APPS SCRIPT WEB APP URL
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec";
 
-    // Formulier verzenden naar Sheet
+    // Formulier verzenden
     document.getElementById('kruidenForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
@@ -346,7 +356,6 @@
         });
     });
 
-    // Plantdata ophalen uit Google Sheets
     let globalePlantData = [];
 
     function laadPlantData() {
@@ -360,20 +369,28 @@
                 container.innerHTML = "";
                 
                 if(data.length === 0) {
-                    container.innerHTML = "<p style='font-style:italic;'>Geen planttabbladen gevonden in de sheet.</p>";
+                    container.innerHTML = "<p style='font-style:italic;'>Geen tabbladen gevonden.</p>";
                     return;
                 }
 
                 data.forEach((plant, index) => {
                     const item = document.createElement('div');
                     item.className = 'plant-list-item';
-                    item.innerHTML = `<span>🌱 ${plant.plantNaam}</span> <span style="font-size:0.8rem; color:#666;">Bekijk logboek →</span>`;
+                    
+                    if(plant.plantNaam.toUpperCase() === 'INDEX') {
+                        item.innerHTML = `<span>📋 INDEX Overzicht</span> <span style="font-size:0.8rem; color:#666;">Open INDEX →</span>`;
+                    } else if(plant.plantNaam === 'LatijnLookup') {
+                        item.innerHTML = `<span>📖 LatijnLookup</span> <span style="font-size:0.8rem; color:#666;">Bekijk bron →</span>`;
+                    } else {
+                        item.innerHTML = `<span>🌱 ${plant.plantNaam}</span> <span style="font-size:0.8rem; color:#666;">Bekijk logboek →</span>`;
+                    }
+                    
                     item.onclick = () => toonPlantLogboek(index);
                     container.appendChild(item);
                 });
             })
             .catch(err => {
-                container.innerHTML = "<p style='color:red;'>Fout bij ophalen van plantdata: " + err + "</p>";
+                container.innerHTML = "<p style='color:red;'>Fout bij ophalen van data: " + err + "</p>";
             });
     }
 
@@ -381,26 +398,36 @@
         const plant = globalePlantData[index];
         document.getElementById('plantenLijstContainer').style.display = 'none';
         document.getElementById('enkelLogboekContainer').style.display = 'block';
-        document.getElementById('geselecteerdePlantTitel').textContent = "Logboek: " + plant.plantNaam;
+        document.getElementById('geselecteerdePlantTitel').textContent = plant.plantNaam === 'INDEX' ? "Overzicht: INDEX" : "Logboek: " + plant.plantNaam;
 
         const tabelContainer = document.getElementById('tabelContainer');
         if(!plant.logboek || plant.logboek.length === 0) {
-            tabelContainer.innerHTML = "<p>Geen logboekregels aanwezig.</p>";
+            tabelContainer.innerHTML = "<p>Geen regels aanwezig.</p>";
             return;
         }
 
         let html = '<table class="log-table"><tr>';
-        // Maak tabelkoppen van de eerste rij
         plant.logboek[0].forEach(kop => {
             html += `<th>${kop || ''}</th>`;
         });
         html += '</tr>';
 
-        // Maak rijen van de overige data
         for(let i = 1; i < plant.logboek.length; i++) {
             html += '<tr>';
-            plant.logboek[i].forEach(cel => {
-                html += `<td>${cel !== undefined ? cel : ''}</td>`;
+            plant.logboek[i].forEach((cel, colIndex) => {
+                // Als het de INDEX tabel is en de cel bevat "Open tabblad" of een link-achtige tekst, maken we er een werkende knop van
+                if(plant.plantNaam.toUpperCase() === 'INDEX' && (cel.toString().includes('Open tabblad') || cel.toString().includes('➡️'))) {
+                    const tabbladNaam = plant.logboek[i][3]; 
+                    const targetIndex = globalePlantData.findIndex(p => p.plantNaam.toLowerCase() === tabbladNaam.toLowerCase());
+                    
+                    if(targetIndex !== -1) {
+                        html += `<td><button class="link-btn" onclick="toonPlantLogboek(${targetIndex})">Open tabblad</button></td>`;
+                    } else {
+                        html += `<td>${cel}</td>`;
+                    }
+                } else {
+                    html += `<td>${cel !== undefined ? cel : ''}</td>`;
+                }
             });
             html += '</tr>';
         }
