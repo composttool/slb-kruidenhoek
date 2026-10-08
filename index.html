@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stadslandbouw Arnhem - Kruidenhoek</title>
+    <title>Stadslandbouw Arnhem - Kruidenhoek (Versie 2026-10-08 11:18)</title>
     <style>
         :root {
             --primary: #2e7d32;
@@ -122,16 +122,27 @@
         }
         .plant-list-item:hover { background: #e2f0e2; }
         
+        /* Verbeterde tabel en container met direct zichtbare scrollbalk */
+        #tabelContainer {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 15px;
+            border: 1px solid #c8e6c9;
+            border-radius: 6px;
+            background: #fff;
+            padding: 5px;
+        }
         .log-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
-            margin-top: 10px;
         }
         .log-table th, .log-table td {
             border: 1px solid #ddd;
-            padding: 6px;
+            padding: 8px;
             text-align: left;
+            white-space: nowrap;
         }
         .log-table th { background-color: #e8f5e9; color: var(--primary-dark); }
 
@@ -139,7 +150,7 @@
             background-color: #1976d2;
             color: white;
             border: none;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.8rem;
@@ -156,6 +167,12 @@
         }
         .success { background: #e8f5e9; color: var(--primary-dark); }
         .error { background: #ffebee; color: #c62828; }
+        .version-footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #777;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -252,9 +269,13 @@
             <div id="enkelLogboekContainer" style="display: none; margin-top: 15px;">
                 <button onclick="terugNaarLijst()" style="background: #666; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">← Terug naar lijst</button>
                 <h4 id="geselecteerdePlantTitel" style="color: var(--primary-dark); margin: 5px 0;"></h4>
-                <div id="tabelContainer" style="overflow-x: auto;"></div>
+                <div id="tabelContainer"></div>
             </div>
         </div>
+    </div>
+
+    <div class="version-footer">
+        Stadslandbouw Arnhem Kruidenhoek WebApp &bull; Versie: 2026-10-08 11:18
     </div>
 </div>
 
@@ -282,7 +303,7 @@
         event.target.classList.add('active');
     }
 
-    // Live Zoekfunctie
+    // Slimme zoekfunctie
     document.getElementById('zoekKruid').addEventListener('input', function(e) {
         const query = e.target.value.toLowerCase().trim();
         const contentBox = document.getElementById('wikiContent');
@@ -294,18 +315,40 @@
             return;
         }
 
-        const gevonden = kruidenDatabase.find(k => k.naam.toLowerCase().includes(query) || k.lat.toLowerCase().includes(query));
+        let gevondenWiki = kruidenDatabase.find(k => k.naam.toLowerCase().includes(query) || k.lat.toLowerCase().includes(query));
+        let gevondenPlant = null;
 
-        if(gevonden) {
-            document.getElementById('resNaam').textContent = gevonden.naam;
-            document.getElementById('resLat').textContent = gevonden.lat;
-            document.getElementById('resFunctie').textContent = gevonden.functie;
-            document.getElementById('resBeschr').textContent = gevonden.beschr;
-            document.getElementById('resStand').textContent = gevonden.stand;
-            document.getElementById('resGrond').textContent = gevonden.grond;
-            document.getElementById('resSnoei').textContent = gevonden.snoei;
-            document.getElementById('resMed').textContent = gevonden.med;
-            document.getElementById('resWaarschuwing').textContent = gevonden.waarschuwing;
+        if(!gevondenWiki && globalePlantData.length > 0) {
+            const indexMatch = globalePlantData.findIndex(p => p.plantNaam.toLowerCase().includes(query));
+            if(indexMatch !== -1) {
+                gevondenPlant = globalePlantData[indexMatch];
+            }
+        }
+
+        if(gevondenWiki) {
+            document.getElementById('resNaam').textContent = gevondenWiki.naam;
+            document.getElementById('resLat').textContent = gevondenWiki.lat;
+            document.getElementById('resFunctie').textContent = gevondenWiki.functie;
+            document.getElementById('resBeschr').textContent = gevondenWiki.beschr;
+            document.getElementById('resStand').textContent = gevondenWiki.stand;
+            document.getElementById('resGrond').textContent = gevondenWiki.grond;
+            document.getElementById('resSnoei').textContent = gevondenWiki.snoei;
+            document.getElementById('resMed').textContent = gevondenWiki.med;
+            document.getElementById('resWaarschuwing').textContent = gevondenWiki.waarschuwing;
+
+            contentBox.style.display = 'block';
+            geenResBox.style.display = 'none';
+        } else if(gevondenPlant) {
+            const targetIndex = globalePlantData.findIndex(p => p.plantNaam === gevondenPlant.plantNaam);
+            document.getElementById('resNaam').textContent = "🌱 " + gevondenPlant.plantNaam;
+            document.getElementById('resLat').textContent = "Gevonden in planttabbladen";
+            document.getElementById('resFunctie').textContent = "Klik hieronder om direct het logboek te openen:";
+            document.getElementById('resBeschr').innerHTML = `<button class="link-btn" onclick="toonPlantLogboek(${targetIndex})" style="padding: 8px 15px; font-size: 0.9rem;">Open logboek van ${gevondenPlant.plantNaam}</button>`;
+            document.getElementById('resStand').textContent = "--";
+            document.getElementById('resGrond').textContent = "--";
+            document.getElementById('resSnoei').textContent = "--";
+            document.getElementById('resMed').textContent = "--";
+            document.getElementById('resWaarschuwing').textContent = "--";
 
             contentBox.style.display = 'block';
             geenResBox.style.display = 'none';
@@ -415,7 +458,6 @@
         for(let i = 1; i < plant.logboek.length; i++) {
             html += '<tr>';
             plant.logboek[i].forEach((cel, colIndex) => {
-                // Als het de INDEX tabel is en de cel bevat "Open tabblad" of een link-achtige tekst, maken we er een werkende knop van
                 if(plant.plantNaam.toUpperCase() === 'INDEX' && (cel.toString().includes('Open tabblad') || cel.toString().includes('➡️'))) {
                     const tabbladNaam = plant.logboek[i][3]; 
                     const targetIndex = globalePlantData.findIndex(p => p.plantNaam.toLowerCase() === tabbladNaam.toLowerCase());
