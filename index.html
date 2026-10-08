@@ -206,7 +206,6 @@
   </div>
 
   <script>
-    // Plak hier je actieve Web App URL van Google Apps Script
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
 
     window.addEventListener('DOMContentLoaded', function() {
@@ -250,6 +249,27 @@
         logboekenHtml += `<h3>🌿 ${plant.plantNaam}</h3>`;
         
         if (plant.logboek && plant.logboek.length > 1) {
+          let headers = plant.logboek[0].map(h => String(h).toLowerCase().trim());
+          
+          // Flexibele / fuzzy matching helperfunctie om kolommen te vinden op basis van trefwoorden
+          function findColumnIndex(keywords) {
+            for (let i = 0; i < headers.length; i++) {
+              let h = headers[i];
+              for (let k = 0; k < keywords.length; k++) {
+                if (h.includes(keywords[k])) {
+                  return i;
+                }
+              }
+            }
+            return -1;
+          }
+
+          let idxDatum = findColumnIndex(['datum', 'tijdstempel', 'timestamp', 'date']);
+          let idxNaam = findColumnIndex(['naam', 'name', 'wie', 'ingevuld']);
+          let idxZiekte = findColumnIndex(['ziekte', 'waarneming', 'gebrek', 'disease']);
+          let idxNotitie = findColumnIndex(['notitie', 'opmerking', 'comment', 'toelichting', 'tekst']);
+          let idxFoto = findColumnIndex(['foto', 'link', 'url', 'afbeelding']);
+
           logboekenHtml += `<table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem;">`;
           
           plant.logboek.forEach((row, index) => {
@@ -269,20 +289,37 @@
           });
           logboekenHtml += `</table>`;
 
-          // Verzamel recente notities voor het overzichtsscherm
           for (let i = 1; i < plant.logboek.length; i++) {
             let row = plant.logboek[i];
-            let datum = row[0] || '';
-            let naam = row[1] || 'Onbekend';
-            let notitie = row[5] || '';
-            let foto = row[6] || '';
+            
+            let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
+            let naam = idxNaam !== -1 ? row[idxNaam] : (row[1] || 'Onbekend');
+            let ziekte = idxZiekte !== -1 ? row[idxZiekte] : '';
+            let notitie = idxNotitie !== -1 ? row[idxNotitie] : '';
+            let foto = idxFoto !== -1 ? row[idxFoto] : '';
 
-            if (notitie || row[4]) { // Als er een notitie of ziekte is
+            if (!foto) {
+              row.forEach(cell => {
+                if (cell && String(cell).startsWith('http')) {
+                  foto = cell;
+                }
+              });
+            }
+
+            let bericht = '';
+            if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
+              bericht += '<strong>Ziekte/Waarneming:</strong> ' + ziekte + '<br>';
+            }
+            if (notitie) {
+              bericht += '<strong>Notitie:</strong> ' + notitie;
+            }
+
+            if (bericht || ziekte) {
               allNotesHtml += `
                 <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
                   <strong>👤 ${naam}</strong> (${plant.plantNaam}) - <span style="font-size: 0.8rem; color: #555;">${datum}</span><br>
-                  <em>Ziekte/Notitie:</em> ${notitie || row[4]}
-                  ${foto ? '<br><a href="' + foto + '" target="_blank">Bekijk foto</a>' : ''}
+                  ${bericht}
+                  ${foto ? '<br><a href="' + foto + '" target="_blank">🔗 Bekijk foto</a>' : ''}
                 </div>`;
             }
           }
@@ -295,7 +332,6 @@
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
-    // Bestand omzetten naar base64 voor de formulier-inzending
     function handleFormSubmit(event) {
       event.preventDefault();
       
