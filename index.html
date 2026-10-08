@@ -392,4 +392,176 @@
           allNotesHtml += `
             <div class="log-entry">
               <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(${String(datum).substring(0, 16)})</span><br>
-              <div style="margin-top: 3px;">${details.join(' \vert{} ')}</div>${foto ? '<div style="margin-top: 3px;"><a href="' + foto + '" target="_blank
+              <div style="margin-top: 3px;">${details.join(' | ')}</div>
+              ${foto ? '<div style="margin-top: 3px;"><a href="' + foto + '" target="_blank">🔗 Bekijk foto</a></div>' : ''}
+            </div>`;
+        }
+      });
+
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen recente opmerkingen gevonden.</p>';
+      logboekenContainer.innerHTML = logboekenHtml;
+    }
+
+    function filterWiki() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const container = document.getElementById('wikiContainer');
+      
+      if (!globalPlantData || globalPlantData.length === 0) {
+        container.innerHTML = '<p>Gegevens worden geladen...</p>';
+        return;
+      }
+
+      let html = '';
+      let kruidenhoekFound = false;
+
+      // 1. Zoek in het tabblad 'Kruidenhoek' (Officiële plantinfo)
+      globalPlantData.forEach(source => {
+        let sheetName = String(source.sheetName || '').toLowerCase();
+        let logboek = source.logboek;
+        
+        if (sheetName.includes('kruidenhoek') && logboek && logboek.length > 1) {
+          let headers = logboek[0].map(h => String(h).toLowerCase().trim());
+          
+          function colIdx(name) {
+            return headers.findIndex(h => h.includes(name));
+          }
+
+          let iSoort = colIdx('soortnaam');
+          let iLatijn = colIdx('latijnse naam');
+          let iFunctie = colIdx('functie');
+          let iBeschrijving = colIdx('algemene beschrijving');
+          let iStandplaats = colIdx('standplaats');
+          let iGrond = colIdx('grondsoort');
+          let iSnoei = colIdx('snoei');
+          let iOogst = colIdx('oogst');
+          let iToepassing = colIdx('toepassing');
+          let iWaarschuwing = colIdx('waarschuwing');
+
+          for (let i = 1; i < logboek.length; i++) {
+            let row = logboek[i];
+            let rowString = row.join(' ').toLowerCase();
+
+            if (rowString.includes(query) || query === '') {
+              kruidenhoekFound = true;
+              let soort = iSoort !== -1 ? row[iSoort] : (row[0] || 'Onbekend');
+              let latijn = iLatijn !== -1 ? row[iLatijn] : '';
+              let functie = iFunctie !== -1 ? row[iFunctie] : '';
+              let beschrijving = iBeschrijving !== -1 ? row[iBeschrijving] : '';
+              let standplaats = iStandplaats !== -1 ? row[iStandplaats] : '';
+              let snoei = iSnoei !== -1 ? row[iSnoei] : '';
+              let oogst = iOogst !== -1 ? row[iOogst] : '';
+              let toepassing = iToepassing !== -1 ? row[iToepassing] : '';
+              let waarschuwing = iWaarschuwing !== -1 ? row[iWaarschuwing] : '';
+
+              html += `
+                <div class="plant-card">
+                  <div class="plant-title">🌿 ${soort}</div>
+                  ${latijn ? `<div class="plant-subtitle">${latijn}${functie ? '— ' + functie : ''}</div>` : ''}
+                  
+                  <div class="plant-info-grid">
+                    ${beschrijving ? `<div><strong>Beschrijving:</strong> ${beschrijving}</div>` : ''}
+                    ${standplaats ? `<div>☀️ <strong>Standplaats:</strong> ${standplaats}</div>` : ''}
+                    ${snoei ? `<div>✂️ <strong>Snoei:</strong> ${snoei}</div>` : ''}
+                    ${oogst ? `<div>🧺 <strong>Oogst:</strong> ${oogst}</div>` : ''}
+                    ${toepassing ? `<div>💡 <strong>Toepassing:</strong> ${toepassing}</div>` : ''}
+                  </div>
+                  
+                  ${waarschuwing ? `<div class="warning-box">⚠️ <strong>Waarschuwing:</strong> ${waarschuwing}</div>` : ''}
+                </div>
+              `;
+            }
+          }
+        }
+      });
+
+      // 2. Zoek in de formulierreacties (Veld-dagboek) gekoppeld aan de zoekopdracht
+      let dagboekHtml = '';
+      if (query !== '') {
+        globalPlantData.forEach(source => {
+          let sheetName = String(source.sheetName || '').toLowerCase();
+          if (!sheetName.includes('kruidenhoek')) {
+            let logboek = source.logboek;
+            if (logboek && logboek.length > 1) {
+              for (let i = 1; i < logboek.length; i++) {
+                let row = logboek[i];
+                let rowStr = row.join(' ').toLowerCase();
+                if (rowStr.includes(query)) {
+                  dagboekHtml += `<div class="log-entry" style="font-size: 0.8rem;">📋 ${row.join(' | ')}</div>`;
+                }
+              }
+            }
+          }
+        });
+      }
+
+      if (dagboekHtml !== '') {
+        html += `<div style="margin-top: 15px;"><h3 style="font-size: 0.95rem; color: #2e7d32;">📁 Veld-Dagboek Historie</h3>${dagboekHtml}</div>`;
+      }
+
+      container.innerHTML = html || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen plantinfo of dagboeken gevonden voor "${query}".</p>`;
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Bezig met verzenden...';
+
+      const fileInput = document.getElementById('foto');
+      const file = fileInput.files[0];
+
+      const payload = {
+        naam: document.getElementById('naam').value,
+        vak: document.getElementById('vak').value,
+        kruidsoort: document.getElementById('kruidsoort').value,
+        actie: document.getElementById('actie').value,
+        ziekte: document.getElementById('ziekte').value,
+        notities: document.getElementById('notities').value,
+        file: null
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          payload.file = {
+            data: e.target.result.split(',')[1],
+            name: file.name,
+            type: file.type
+          };
+          sendDataToScript(payload);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        sendDataToScript(payload);
+      }
+    }
+
+    function sendDataToScript(payload) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert('Inzending succesvol verstuurd!');
+        document.getElementById('fieldForm').reset();
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Inzending Versturen';
+        
+        sessionStorage.removeItem('kruidenhoek_data');
+        sessionStorage.removeItem('kruidenhoek_time');
+
+        switchTab('opmerkingen', document.querySelector('.nav-btn'));
+        loadDashboardData();
+      })
+      .catch(err => {
+        alert('Fout bij verzenden: ' + err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Inzending Versturen';
+      });
+    }
+  </script>
+</body>
+</html>
