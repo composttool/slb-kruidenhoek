@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.0-MASTER)</title>
+  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.1-FAST)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -34,7 +34,6 @@
     }
     h1 { margin: 0; font-size: 1.3rem; }
     
-    /* Navigatie Knoppen / Tabbladen geoptimaliseerd voor mobiel */
     .nav-tabs {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -74,7 +73,6 @@
       display: block;
     }
 
-    /* Formulier & Zoekstijlen */
     .form-group {
       margin-bottom: 12px;
     }
@@ -106,7 +104,6 @@
       width: 100%;
     }
 
-    /* Wiki & Resultaten Kaarten */
     .plant-card {
       background: #fafafa;
       border: 1px solid #d0e1d4;
@@ -157,6 +154,19 @@
       font-style: italic;
       padding: 15px;
     }
+    
+    .refresh-bar {
+      text-align: right;
+      margin-bottom: 8px;
+    }
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -164,11 +174,10 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.0)</span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.1)</span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
-    <!-- Navigatie Knoppen (zonder inline onclick om errors te voorkomen) -->
     <div class="nav-tabs">
       <button class="nav-btn active" data-target="opmerkingen">💡 Opmerkingen</button>
       <button class="nav-btn" data-target="wiki">🔍 Wiki & Zoeken</button>
@@ -179,12 +188,13 @@
     <!-- Tab 1: Actieve Opmerkingen -->
     <div id="opmerkingen" class="tab-content active">
       <div class="card">
+        <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
         <h2>💡 Recente Acties & Veldnotities</h2>
-        <div id="notesContainer" class="loading">Gegevens ophalen...</div>
+        <div id="notesContainer" class="loading">Gegevens laden...</div>
       </div>
     </div>
 
-    <!-- Tab 2: Wiki & Zoeken (Gesplitst in Plantinfo & Dagboek) -->
+    <!-- Tab 2: Wiki & Zoeken -->
     <div id="wiki" class="tab-content">
       <div class="card">
         <h2>🔍 Planten Wiki & Veld-Dagboek</h2>
@@ -192,7 +202,7 @@
           <input type="text" id="searchInput" placeholder="Typ kruidnaam of vak (bijv. Rozemarijn, K1)...">
         </div>
         <div id="wikiContainer">
-          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam (bijv. Rozemarijn, Tijm) om de officiële teeltinfo en bijbehorende velddagboeken te bekijken.</p>
+          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om te zoeken.</p>
         </div>
       </div>
     </div>
@@ -254,7 +264,7 @@
     <div id="logboeken" class="tab-content">
       <div class="card">
         <h2>📁 Ruwe Formulier Reacties</h2>
-        <div id="logboekenContainer" class="loading">Reacties ophalen...</div>
+        <div id="logboekenContainer" class="loading">Reacties laden...</div>
       </div>
     </div>
 
@@ -265,10 +275,6 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
-      sessionStorage.removeItem('kruidenhoek_data');
-      sessionStorage.removeItem('kruidenhoek_time');
-
-      // Veilige Event Listeners voor navigatieknoppen
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const targetId = this.getAttribute('data-target');
@@ -276,20 +282,37 @@
         });
       });
 
-      // Zoekveld listener
       const searchInput = document.getElementById('searchInput');
       if (searchInput) {
         searchInput.addEventListener('input', filterWiki);
       }
 
-      // Formulier submit listener
       const fieldForm = document.getElementById('fieldForm');
       if (fieldForm) {
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      loadDashboardData();
+      // Snelle laad logica via sessionStorage cache
+      const cachedData = sessionStorage.getItem('kruidenhoek_data');
+      const cachedTime = sessionStorage.getItem('kruidenhoek_time');
+
+      if (cachedData) {
+        globalPlantData = JSON.parse(cachedData);
+        displayLogs(globalPlantData);
+        filterWiki();
+        if (cachedTime) {
+          document.getElementById('timestampInfo').textContent = 'Geladen uit cache: ' + cachedTime;
+        }
+      } else {
+        loadDashboardData();
+      }
     });
+
+    function forceRefreshData() {
+      sessionStorage.removeItem('kruidenhoek_data');
+      sessionStorage.removeItem('kruidenhoek_time');
+      loadDashboardData();
+    }
 
     function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -302,18 +325,12 @@
 
     function loadDashboardData() {
       const notesContainer = document.getElementById('notesContainer');
-      notesContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets...</div>';
+      notesContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets (even geduld)...</div>';
 
       if (!SCRIPT_URL) return;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      fetch(SCRIPT_URL, { signal: controller.signal })
-        .then(response => {
-          clearTimeout(timeoutId);
-          return response.json();
-        })
+      fetch(SCRIPT_URL)
+        .then(response => response.json())
         .then(data => {
           globalPlantData = data;
           const now = new Date().toLocaleString('nl-NL');
@@ -327,7 +344,6 @@
           if (timestampInfo) timestampInfo.textContent = 'Gesynchroniseerd: ' + now;
         })
         .catch(err => {
-          clearTimeout(timeoutId);
           notesContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
         });
     }
