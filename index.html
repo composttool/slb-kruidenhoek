@@ -42,16 +42,15 @@
     }
     h2 { font-size: 1.1rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
     
-    /* Stijl voor Actieve Opmerkingen */
     .notes-list {
-      max-height: 350px;
+      max-height: 400px;
       overflow-y: auto;
     }
     .note-item {
       background: var(--primary-light);
       border-left: 4px solid var(--primary);
-      padding: 10px 12px;
-      margin-bottom: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
       border-radius: 0 6px 6px 0;
       font-size: 0.9rem;
     }
@@ -60,8 +59,10 @@
       justify-content: space-between;
       font-weight: bold;
       color: var(--primary);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       font-size: 0.85rem;
+      flex-wrap: wrap;
+      gap: 5px;
     }
     .note-content {
       white-space: pre-wrap;
@@ -89,14 +90,10 @@
       </div>
     </div>
 
-    <!-- Plaats hieronder eventueel jouw overige componenten zoals Veldinvoer, Wiki en Logboeken -->
-
   </div>
 
   <script>
-    // ==========================================
-    // JOUW GOOGLE APPS SCRIPT WEB APP URL (netjes tussen de aanhalingstekens)
-    // ==========================================
+    // Jouw Google Apps Script Web App URL
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
 
     window.addEventListener('DOMContentLoaded', function() {
@@ -113,13 +110,6 @@
           .catch(err => {
             container.innerHTML = '<div style="color: red;">Fout bij ophalen van opmerkingen: ' + err.message + '</div>';
           });
-      } else if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(displayActiveNotes)
-          .withFailureHandler(err => {
-            container.innerHTML = '<div style="color: red;">Fout bij laden: ' + err.message + '</div>';
-          })
-          .getActiveNotesData();
       } else {
         container.innerHTML = '<div style="color: #c62828;">Geen SCRIPT_URL ingesteld.</div>';
       }
@@ -136,16 +126,21 @@
       var html = '';
       for (var i = 0; i < notes.length; i++) {
         var item = notes[i];
+        
+        // Bouw de datum- en tijdsweergave op
         var dateTimeStr = '';
         if (item.datum) {
           dateTimeStr += '📅 ' + item.datum;
           if (item.tijd) {
-            dateTimeStr += ' ' + item.tijd;
+            dateTimeStr += ' om ' + item.tijd;
           }
         }
         
         html += '<div class="note-item">';
-        html += '<div class="note-header"><span>🌿 ' + escapeHtml(item.plant) + '</span><span>' + escapeHtml(dateTimeStr) + '</span></div>';
+        html += '<div class="note-header">';
+        html += '<span>👤 ' + escapeHtml(item.naam) + '</span>';
+        html += '<span>' + escapeHtml(dateTimeStr) + '</span>';
+        html += '</div>';
         html += '<div class="note-content">' + escapeHtml(item.note) + '</div>';
         html += '</div>';
       }
