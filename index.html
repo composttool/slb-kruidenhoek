@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stadslandbouw Arnhem - Kruidenhoek (Versie 2026-10-08 11:18)</title>
+    <title>Stadslandbouw Arnhem - Kruidenhoek (Versie 2026-10-08 11:25)</title>
     <style>
         :root {
             --primary: #2e7d32;
@@ -83,6 +83,12 @@
             font-size: 1rem;
         }
         textarea { resize: vertical; height: 80px; }
+        
+        input[type="file"] {
+            padding: 7px;
+            background: #fafafa;
+        }
+
         button.action-btn {
             background-color: var(--primary);
             color: white;
@@ -122,7 +128,6 @@
         }
         .plant-list-item:hover { background: #e2f0e2; }
         
-        /* Verbeterde tabel en container met direct zichtbare scrollbalk */
         #tabelContainer {
             overflow-x: auto;
             overflow-y: hidden;
@@ -248,6 +253,9 @@
                 <label for="notities">Notities / Opmerkingen:</label>
                 <textarea id="notities" name="notities" placeholder="Extra details..."></textarea>
 
+                <label for="fotoUpload">📷 Foto toevoegen (optioneel):</label>
+                <input type="file" id="fotoUpload" name="fotoUpload" accept="image/*">
+
                 <button type="submit" id="submitBtn" class="action-btn">Opslaan & Verzenden</button>
             </form>
             <div id="statusMsg" class="status-msg"></div>
@@ -275,7 +283,7 @@
     </div>
 
     <div class="version-footer">
-        Stadslandbouw Arnhem Kruidenhoek WebApp &bull; Versie: 2026-10-08 11:18
+        Stadslandbouw Arnhem Kruidenhoek WebApp &bull; Versie: 2026-10-08 11:25
     </div>
 </div>
 
@@ -360,22 +368,46 @@
 
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec";
 
-    // Formulier verzenden
+    // Formulier verzenden inclusief eventuele foto
     document.getElementById('kruidenForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
         const statusDiv = document.getElementById('statusMsg');
         
         btn.disabled = true;
-        btn.textContent = "Even geduld, verzenden...";
+        btn.textContent = "Even geduld, foto & gegevens verzenden...";
+
+        const fileInput = document.getElementById('fotoUpload');
         
+        if (fileInput.files && fileInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(uploadEvent) {
+                const base64Data = uploadEvent.target.result.split(',')[1];
+                const fileInfo = {
+                    name: fileInput.files[0].name,
+                    type: fileInput.files[0].type,
+                    data: base64Data
+                };
+                verstuurDataNaarScript(fileInfo);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            verstuurDataNaarScript(null);
+        }
+    });
+
+    function verstuurDataNaarScript(fileInfo) {
+        const statusDiv = document.getElementById('statusMsg');
+        const btn = document.getElementById('submitBtn');
+
         const formData = {
             naam: document.getElementById('naam').value,
             vak: document.getElementById('vak').value,
             kruidsoort: document.getElementById('kruidsoort').value,
             actie: document.getElementById('actie').value,
             ziekte: document.getElementById('ziekte').value,
-            notities: document.getElementById('notities').value
+            notities: document.getElementById('notities').value,
+            file: fileInfo
         };
 
         fetch(WEB_APP_URL, {
@@ -384,7 +416,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         }).then(() => {
-            statusDiv.textContent = "Succes! Gegevens zijn verzonden naar de Kruidenhoek.";
+            statusDiv.textContent = "Succes! Gegevens en foto zijn verzonden.";
             statusDiv.className = "status-msg success";
             statusDiv.style.display = "block";
             document.getElementById('kruidenForm').reset();
@@ -397,7 +429,7 @@
             btn.disabled = false;
             btn.textContent = "Opslaan & Verzenden";
         });
-    });
+    }
 
     let globalePlantData = [];
 
