@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V2.6-MASTER)</title>
+  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V2.9-MASTER)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -125,7 +125,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Kruidenhoek Dashboard <span style="opacity: 0.7; font-size: 0.75rem;">(V2.6-MASTER)</span></p>
+      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Kruidenhoek Dashboard <span style="opacity: 0.7; font-size: 0.75rem;">(V2.9-MASTER)</span></p>
       <p id="timestampInfo" style="margin: 4px 0 0 0; font-size: 0.75rem; opacity: 0.85;"></p>
     </header>
 
@@ -134,14 +134,14 @@
       <button class="nav-btn active" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
       <button class="nav-btn" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
       <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
-      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Plant Logboeken</button>
+      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Formulier Reacties</button>
     </div>
 
     <!-- Tab 1: Actieve Opmerkingen -->
     <div id="opmerkingen" class="tab-content active">
       <div class="card">
         <h2>💡 Recente Acties & Opmerkingen uit het Veld</h2>
-        <div id="notesContainer" class="loading">Gegevens laden...</div>
+        <div id="notesContainer" class="loading">Gegevens ophalen...</div>
       </div>
     </div>
 
@@ -150,10 +150,10 @@
       <div class="card">
         <h2>🔍 Wiki & Zoeken</h2>
         <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ trefwoord, plantnaam of vak (bijv. K1)..." oninput="filterWiki()">
+          <input type="text" id="searchInput" placeholder="Typ trefwoord, naam, kruid of vak (bijv. K1)..." oninput="filterWiki()">
         </div>
         <div id="wikiContainer">
-          <p style="color: #666; font-style: italic;">Typ hierboven om direct te zoeken in alle planten en logboeken.</p>
+          <p style="color: #666; font-style: italic;">Typ hierboven om direct te zoeken in alle formulierreacties.</p>
         </div>
       </div>
     </div>
@@ -211,11 +211,11 @@
       </div>
     </div>
 
-    <!-- Tab 4: Plant Logboeken -->
+    <!-- Tab 4: Formulier Reacties -->
     <div id="logboeken" class="tab-content">
       <div class="card">
-        <h2>📁 Plant Logboeken & Tabbladen</h2>
-        <div id="logboekenContainer" class="loading">Logboeken ophalen...</div>
+        <h2>📁 Gecombineerde Formulier Reacties</h2>
+        <div id="logboekenContainer" class="loading">Reacties ophalen...</div>
       </div>
     </div>
 
@@ -226,10 +226,8 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
-      // Forceer een schone start van de sessie-cache bij openen
       sessionStorage.removeItem('kruidenhoek_data');
       sessionStorage.removeItem('kruidenhoek_time');
-      
       loadDashboardData();
     });
 
@@ -247,7 +245,6 @@
 
       if (!SCRIPT_URL) return;
 
-      // Time-out beveiliging van 15 seconden tegen oneindig laden
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -265,12 +262,12 @@
 
           displayLogs(data);
           filterWiki();
-          document.getElementById('timestampInfo').textContent = 'Laatst gesynchroniseerd: ' + now + ' (V2.6)';
+          document.getElementById('timestampInfo').textContent = 'Laatst gesynchroniseerd: ' + now + ' (V2.9)';
         })
         .catch(err => {
           clearTimeout(timeoutId);
           if (err.name === 'AbortError') {
-            notesContainer.innerHTML = '<div style="color: red;">Het ophalen duurt te lang (time-out). Controleer of de Google Apps Script URL correct is.</div>';
+            notesContainer.innerHTML = '<div style="color: red;">Het ophalen duurt te lang (time-out). Controleer of de script-URL correct is.</div>';
           } else {
             notesContainer.innerHTML = '<div style="color: red;">Fout bij ophalen data: ' + err.message + '</div>';
           }
@@ -281,7 +278,7 @@
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
       
-      if (!Array.isArray(plantData)) {
+      if (!Array.isArray(plantData) || plantData.length === 0) {
         notesContainer.innerHTML = '<p>Geen geldige data ontvangen.</p>';
         return;
       }
@@ -289,85 +286,82 @@
       let allNotesHtml = '';
       let logboekenHtml = '';
 
-      plantData.forEach(plant => {
-        logboekenHtml += `<h3>🌿 ${plant.plantNaam}</h3>`;
+      plantData.forEach(source => {
+        let logboek = source.logboek;
+        if (!logboek || logboek.length === 0) return;
+
+        let headers = logboek[0].map(h => String(h).toLowerCase().trim());
         
-        if (plant.logboek && plant.logboek.length > 1) {
-          let headers = plant.logboek[0].map(h => String(h).toLowerCase().trim());
-          
-          function findColumnIndex(keywords) {
-            for (let i = 0; i < headers.length; i++) {
-              let h = headers[i];
-              for (let k = 0; k < keywords.length; k++) {
-                if (h.includes(keywords[k])) {
-                  return i;
-                }
-              }
+        function findColumnIndex(keywords) {
+          for (let i = 0; i < headers.length; i++) {
+            let h = headers[i];
+            for (let k = 0; k < keywords.length; k++) {
+              if (h.includes(keywords[k])) return i;
             }
-            return -1;
           }
+          return -1;
+        }
 
-          let idxDatum = findColumnIndex(['datum', 'tijdstempel', 'timestamp', 'date']);
-          let idxNaam = findColumnIndex(['naam', 'name', 'wie', 'ingevuld']);
-          let idxZiekte = findColumnIndex(['ziekte', 'waarneming', 'gebrek', 'disease']);
-          let idxNotitie = findColumnIndex(['notitie', 'opmerking', 'comment', 'toelichting', 'tekst']);
-          let idxFoto = findColumnIndex(['foto', 'link', 'url', 'afbeelding']);
+        let idxDatum = findColumnIndex(['datum', 'tijdstempel', 'timestamp', 'date']);
+        let idxNaam = findColumnIndex(['naam', 'name', 'wie', 'ingevuld']);
+        let idxZiekte = findColumnIndex(['ziekte', 'waarneming', 'gebrek', 'disease']);
+        let idxNotitie = findColumnIndex(['notitie', 'opmerking', 'comment', 'toelichting', 'tekst']);
+        let idxFoto = findColumnIndex(['foto', 'link', 'url', 'afbeelding']);
+        let idxKruid = findColumnIndex(['kruid', 'plant', 'soort']);
+        let idxVak = findColumnIndex(['vak']);
 
-          logboekenHtml += `<table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem;">`;
-          
-          plant.logboek.forEach((row, index) => {
-            logboekenHtml += `<tr>`;
+        logboekenHtml += `<table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem;">`;
+        logboek.forEach((row, index) => {
+          logboekenHtml += `<tr>`;
+          row.forEach(cell => {
+            let cellContent = cell !== null ? String(cell) : '';
+            if (cellContent.startsWith('http')) {
+              cellContent = `<a href="${cellContent}" target="_blank">🔗 Foto/Link</a>`;
+            }
+            if (index === 0) {
+              logboekenHtml += `<th style="background: #e8f5e9; padding: 6px; text-align: left;">${cellContent}</th>`;
+            } else {
+              logboekenHtml += `<td style="padding: 6px;">${cellContent}</td>`;
+            }
+          });
+          logboekenHtml += `</tr>`;
+        });
+        logboekenHtml += `</table>`;
+
+        for (let i = logboek.length - 1; i >= 1; i--) {
+          let row = logboek[i];
+          let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
+          let naam = idxNaam !== -1 ? row[idxNaam] : 'Onbekend';
+          let kruid = idxKruid !== -1 ? row[idxKruid] : '';
+          let vak = idxVak !== -1 ? row[idxVak] : '';
+          let ziekte = idxZiekte !== -1 ? row[idxZiekte] : '';
+          let notitie = idxNotitie !== -1 ? row[idxNotitie] : '';
+          let foto = idxFoto !== -1 ? row[idxFoto] : '';
+
+          if (!foto) {
             row.forEach(cell => {
-              let cellContent = cell !== null ? String(cell) : '';
-              if (cellContent.startsWith('http')) {
-                cellContent = `<a href="${cellContent}" target="_blank">🔗 Foto/Link</a>`;
-              }
-              if (index === 0) {
-                logboekenHtml += `<th style="background: #e8f5e9; padding: 6px; text-align: left;">${cellContent}</th>`;
-              } else {
-                logboekenHtml += `<td style="padding: 6px;">${cellContent}</td>`;
+              if (cell && String(cell).startsWith('http')) {
+                foto = cell;
               }
             });
-            logboekenHtml += `</tr>`;
-          });
-          logboekenHtml += `</table>`;
-
-          for (let i = 1; i < plant.logboek.length; i++) {
-            let row = plant.logboek[i];
-            
-            let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
-            let naam = idxNaam !== -1 ? row[idxNaam] : (row[1] || 'Onbekend');
-            let ziekte = idxZiekte !== -1 ? row[idxZiekte] : '';
-            let notitie = idxNotitie !== -1 ? row[idxNotitie] : '';
-            let foto = idxFoto !== -1 ? row[idxFoto] : '';
-
-            if (!foto) {
-              row.forEach(cell => {
-                if (cell && String(cell).startsWith('http')) {
-                  foto = cell;
-                }
-              });
-            }
-
-            let bericht = '';
-            if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
-              bericht += '<strong>Ziekte/Waarneming:</strong> ' + ziekte + '<br>';
-            }
-            if (notitie) {
-              bericht += '<strong>Notitie:</strong> ' + notitie;
-            }
-
-            if (bericht || ziekte) {
-              allNotesHtml += `
-                <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
-                  <strong>👤 ${naam}</strong> (${plant.plantNaam}) - <span style="font-size: 0.8rem; color: #555;">${datum}</span><br>
-                  ${bericht}
-                  ${foto ? '<br><a href="' + foto + '" target="_blank">🔗 Bekijk foto</a>' : ''}
-                </div>`;
-            }
           }
-        } else {
-          logboekenHtml += `<p style="font-style: italic; color: #666;">Nog geen logboekregels voor dit tabblad.</p>`;
+
+          let details = [];
+          if (vak) details.push('Vak: ' + vak);
+          if (kruid) details.push('Kruid: ' + kruid);
+          if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
+            details.push('Ziekte/Waarneming: ' + ziekte);
+          }
+          if (notitie) {
+            details.push('Notitie: ' + notitie);
+          }
+
+          allNotesHtml += `
+            <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
+              <strong>👤 ${naam}</strong> <span style="font-size: 0.8rem; color: #555;">(${datum})</span><br>
+              <div style="margin-top: 4px; font-size: 0.9rem;">${details.join(' | ')}</div>
+              ${foto ? '<div style="margin-top: 4px;"><a href="' + foto + '" target="_blank">🔗 Bekijk foto</a></div>' : ''}
+            </div>`;
         }
       });
 
@@ -386,8 +380,96 @@
 
       let html = '';
 
-      globalPlantData.forEach(plant => {
-        let plantNaam = plant.plantNaam.toLowerCase();
+      globalPlantData.forEach(source => {
+        let logboek = source.logboek;
+        if (!logboek || logboek.length <= 1) return;
+
         let matchedRows = [];
 
-        if (plant.logboek && plant.logboek.
+        for (let i = 1; i < logboek.length; i++) {
+          let rowString = logboek[i].join(' ').toLowerCase();
+          if (rowString.includes(query) || query === '') {
+            matchedRows.push(logboek[i]);
+          }
+        }
+
+        if (matchedRows.length > 0) {
+          html += `
+            <div style="background: #fff; border: 1px solid #d0e1d4; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 1rem;">📋 Formulier Reacties Overzicht</h3>
+              <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #444;">
+          `;
+          matchedRows.forEach(row => {
+            html += `<li style="margin-bottom: 4px;">${row.join(' | ')}</li>`;
+          });
+          html += `</ul></div>`;
+        }
+      });
+
+      container.innerHTML = html || '<p style="color: #666; font-style: italic;">Geen resultaten gevonden voor je zoekopdracht.</p>';
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Bezig met verzenden...';
+
+      const fileInput = document.getElementById('foto');
+      const file = fileInput.files[0];
+
+      const payload = {
+        naam: document.getElementById('naam').value,
+        vak: document.getElementById('vak').value,
+        kruidsoort: document.getElementById('kruidsoort').value,
+        actie: document.getElementById('actie').value,
+        ziekte: document.getElementById('ziekte').value,
+        notities: document.getElementById('notities').value,
+        file: null
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          payload.file = {
+            data: e.target.result.split(',')[1],
+            name: file.name,
+            type: file.type
+          };
+          sendDataToScript(payload);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        sendDataToScript(payload);
+      }
+    }
+
+    function sendDataToScript(payload) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert('Inzending succesvol verstuurd!');
+        document.getElementById('fieldForm').reset();
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Inzending Versturen';
+        
+        sessionStorage.removeItem('kruidenhoek_data');
+        sessionStorage.removeItem('kruidenhoek_time');
+
+        switchTab('opmerkingen', document.querySelector('.nav-btn'));
+        loadDashboardData();
+      })
+      .catch(err => {
+        alert('Fout bij verzenden: ' + err);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Inzending Versturen';
+      });
+    }
+  </script>
+</body>
+</html>
