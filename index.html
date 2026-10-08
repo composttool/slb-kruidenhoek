@@ -43,7 +43,7 @@
     }
     .nav-btn {
       flex: 1;
-      min-width: 130px;
+      min-width: 120px;
       padding: 10px 15px;
       text-align: center;
       background: #e0e0e0;
@@ -79,35 +79,44 @@
       display: block;
     }
 
-    .notes-list {
-      max-height: 500px;
-      overflow-y: auto;
+    /* Formulier stijlen */
+    .form-group {
+      margin-bottom: 15px;
     }
-    .note-item {
-      background: var(--primary-light);
-      border-left: 4px solid var(--primary);
-      padding: 12px;
-      margin-bottom: 12px;
-      border-radius: 0 6px 6px 0;
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
       font-size: 0.9rem;
     }
-    .note-header {
-      display: flex;
-      justify-content: space-between;
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 0.95rem;
+    }
+    textarea { resize: vertical; height: 100px; }
+    
+    .submit-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 1rem;
       font-weight: bold;
-      color: var(--primary);
-      margin-bottom: 6px;
-      font-size: 0.85rem;
-      flex-wrap: wrap;
-      gap: 5px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
     }
-    .note-content {
-      white-space: pre-wrap;
-    }
+    .submit-btn:hover { opacity: 0.9; }
+
     .loading {
       text-align: center;
       color: #666;
       font-style: italic;
+      padding: 20px;
     }
   </style>
 </head>
@@ -130,45 +139,78 @@
     <!-- Tab 1: Actieve Opmerkingen -->
     <div id="opmerkingen" class="tab-content active">
       <div class="card">
-        <h2>💡 Actieve Opmerkingen & Aandachtspunten</h2>
-        <div id="notesContainer" class="notes-list">
-          <div class="loading">Opmerkingen ophalen uit het sheet...</div>
-        </div>
+        <h2>💡 Recente Acties & Opmerkingen uit het Veld</h2>
+        <div id="notesContainer" class="loading">Gegevens laden...</div>
       </div>
     </div>
 
     <!-- Tab 2: Wiki & Zoeken -->
     <div id="wiki" class="tab-content">
       <div class="card">
-        <h2>🔍 Wiki & Zoeken</h2>
-        <p>Zoekfunctie en wiki-gegevens worden hier geladen.</p>
+        <h2>🔍 Wiki & Planteninformatie</h2>
+        <p>Hier komt de zoekfunctie voor de kruidensoorten en handleidingen.</p>
       </div>
     </div>
 
     <!-- Tab 3: Veldinvoer -->
     <div id="veldinvoer" class="tab-content">
       <div class="card">
-        <h2>📝 Veldinvoer</h2>
-        <p>Formulier voor veldinvoer.</p>
+        <h2>📝 Veldinvoer Formulier</h2>
+        <form id="fieldForm" onsubmit="handleFormSubmit(event)">
+          <div class="form-group">
+            <label for="naam">Je Naam:</label>
+            <input type="text" id="naam" required placeholder="Bijv. Jan">
+          </div>
+          <div class="form-group">
+            <label for="vak">Vak:</label>
+            <input type="text" id="vak" required placeholder="Bijv. K1">
+          </div>
+          <div class="form-group">
+            <label for="kruidsoort">Kruidensoort:</label>
+            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn of Tijm">
+          </div>
+          <div class="form-group">
+            <label for="actie">Type Actie / Onderhoud:</label>
+            <select id="actie">
+              <option value="Snoei / Onderhoud">Snoei / Onderhoud</option>
+              <option value="Oogst">Oogst</option>
+              <option value="Water geven">Water geven</option>
+              <option value="Monitoring / Waarneming">Monitoring / Waarneming</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ziekte">Ziekte of Waarneming:</label>
+            <input type="text" id="ziekte" placeholder="Bijv. Geen of Meeldauw">
+          </div>
+          <div class="form-group">
+            <label for="notities">Notities of Opmerkingen:</label>
+            <textarea id="notities" placeholder="Typ hier je opmerkingen..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="foto">Foto (optioneel):</label>
+            <input type="file" id="foto" accept="image/*">
+          </div>
+          <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
+        </form>
       </div>
     </div>
 
     <!-- Tab 4: Plant Logboeken -->
     <div id="logboeken" class="tab-content">
       <div class="card">
-        <h2>📁 Planttabbladen & Dagboeken</h2>
-        <p>Overzicht van plant logboeken.</p>
+        <h2>📁 Plant Logboeken & Tabbladen</h2>
+        <div id="logboekenContainer" class="loading">Logboeken ophalen...</div>
       </div>
     </div>
 
   </div>
 
   <script>
-    // Plak hieronder eventueel je eigen web-app URL als die afwijkt
+    // Plak hier je actieve Web App URL van Google Apps Script
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
 
     window.addEventListener('DOMContentLoaded', function() {
-      loadActiveNotes();
+      loadDashboardData();
     });
 
     function switchTab(tabId, btn) {
@@ -179,60 +221,143 @@
       btn.classList.add('active');
     }
 
-    function loadActiveNotes() {
-      const container = document.getElementById('notesContainer');
+    function loadDashboardData() {
+      if (!SCRIPT_URL) return;
 
-      if (SCRIPT_URL && SCRIPT_URL !== '') {
-        fetch(SCRIPT_URL + '?action=getNotes')
-          .then(response => response.json())
-          .then(data => displayActiveNotes(data))
-          .catch(err => {
-            container.innerHTML = '<div style="color: red;">Fout bij ophalen van opmerkingen: ' + err.message + '</div>';
-          });
-      } else {
-        container.innerHTML = '<div style="color: #c62828;">Geen SCRIPT_URL ingesteld.</div>';
-      }
+      fetch(SCRIPT_URL)
+        .then(response => response.json())
+        .then(data => {
+          displayLogs(data);
+        })
+        .catch(err => {
+          document.getElementById('notesContainer').innerHTML = '<div style="color: red;">Fout bij ophalen data: ' + err.message + '</div>';
+        });
     }
 
-    function displayActiveNotes(notes) {
-      var container = document.getElementById('notesContainer');
+    function displayLogs(plantData) {
+      const notesContainer = document.getElementById('notesContainer');
+      const logboekenContainer = document.getElementById('logboekenContainer');
       
-      if (!notes || notes.length === 0) {
-        container.innerHTML = '<div style="color: #666; font-style: italic;">Geen actieve opmerkingen gevonden.</div>';
+      if (!Array.isArray(plantData)) {
+        notesContainer.innerHTML = '<p>Geen geldige data ontvangen.</p>';
         return;
       }
-      
-      var html = '';
-      for (var i = 0; i < notes.length; i++) {
-        var item = notes[i];
+
+      let allNotesHtml = '';
+      let logboekenHtml = '';
+
+      plantData.forEach(plant => {
+        logboekenHtml += `<h3>🌿 ${plant.plantNaam}</h3>`;
         
-        var dateTimeStr = '';
-        if (item.datum) {
-          dateTimeStr += '📅 ' + item.datum;
-          if (item.tijd) {
-            dateTimeStr += ' om ' + item.tijd;
+        if (plant.logboek && plant.logboek.length > 1) {
+          logboekenHtml += `<table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem;">`;
+          
+          plant.logboek.forEach((row, index) => {
+            logboekenHtml += `<tr>`;
+            row.forEach(cell => {
+              let cellContent = cell !== null ? String(cell) : '';
+              if (cellContent.startsWith('http')) {
+                cellContent = `<a href="${cellContent}" target="_blank">🔗 Foto/Link</a>`;
+              }
+              if (index === 0) {
+                logboekenHtml += `<th style="background: #e8f5e9; padding: 6px; text-align: left;">${cellContent}</th>`;
+              } else {
+                logboekenHtml += `<td style="padding: 6px;">${cellContent}</td>`;
+              }
+            });
+            logboekenHtml += `</tr>`;
+          });
+          logboekenHtml += `</table>`;
+
+          // Verzamel recente notities voor het overzichtsscherm
+          for (let i = 1; i < plant.logboek.length; i++) {
+            let row = plant.logboek[i];
+            let datum = row[0] || '';
+            let naam = row[1] || 'Onbekend';
+            let notitie = row[5] || '';
+            let foto = row[6] || '';
+
+            if (notitie || row[4]) { // Als er een notitie of ziekte is
+              allNotesHtml += `
+                <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
+                  <strong>👤 ${naam}</strong> (${plant.plantNaam}) - <span style="font-size: 0.8rem; color: #555;">${datum}</span><br>
+                  <em>Ziekte/Notitie:</em> ${notitie || row[4]}
+                  ${foto ? '<br><a href="' + foto + '" target="_blank">Bekijk foto</a>' : ''}
+                </div>`;
+            }
           }
+        } else {
+          logboekenHtml += `<p style="font-style: italic; color: #666;">Nog geen logboekregels voor dit tabblad.</p>`;
         }
-        
-        html += '<div class="note-item">';
-        html += '<div class="note-header">';
-        html += '<span>👤 ' + escapeHtml(item.naam) + '</span>';
-        html += '<span>' + escapeHtml(dateTimeStr) + '</span>';
-        html += '</div>';
-        html += '<div class="note-content">' + escapeHtml(item.note) + '</div>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
+      });
+
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen recente opmerkingen gevonden.</p>';
+      logboekenContainer.innerHTML = logboekenHtml;
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    // Bestand omzetten naar base64 voor de formulier-inzending
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Bezig met verzenden...';
+
+      const fileInput = document.getElementById('foto');
+      const file = fileInput.files[0];
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64Data = e.target.result.split(',')[1];
+          sendDataToScript({
+            naam: document.getElementById('naam').value,
+            vak: document.getElementById('vak').value,
+            kruidsoort: document.getElementById('kruidsoort').value,
+            actie: document.getElementById('actie').value,
+            ziekte: document.getElementById('ziekte').value,
+            notities: document.getElementById('notities').value,
+            file: {
+              data: base64Data,
+              name: file.name,
+              type: file.type
+            }
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        sendDataToScript({
+          naam: document.getElementById('naam').value,
+          vak: document.getElementById('vak').value,
+          kruidsoort: document.getElementById('kruidsoort').value,
+          actie: document.getElementById('actie').value,
+          ziekte: document.getElementById('ziekte').value,
+          notities: document.getElementById('notities').value,
+          file: null
+        });
+      }
+    }
+
+    function sendDataToScript(payload) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert('Inzending succesvol verstuurd!');
+        document.getElementById('fieldForm').reset();
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Inzending Versturen';
+        switchTab('opmerkingen', document.querySelector('.nav-btn'));
+        loadDashboardData();
+      })
+      .catch(err => {
+        alert('Fout bij verzenden: ' + err);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Inzending Versturen';
+      });
     }
   </script>
 </body>
