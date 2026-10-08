@@ -21,7 +21,7 @@
       padding: 15px;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
     }
     header {
@@ -29,10 +29,40 @@
       color: white;
       padding: 15px 20px;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       text-align: center;
     }
     h1 { margin: 0; font-size: 1.4rem; }
+    
+    /* Navigatie Knoppen / Tabbladen */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      flex: 1;
+      min-width: 130px;
+      padding: 10px 15px;
+      text-align: center;
+      background: #e0e0e0;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .nav-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    .nav-btn:hover {
+      opacity: 0.9;
+    }
+
     .card {
       background: var(--card-bg);
       border-radius: 8px;
@@ -42,8 +72,15 @@
     }
     h2 { font-size: 1.1rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
     
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
     .notes-list {
-      max-height: 400px;
+      max-height: 500px;
       overflow-y: auto;
     }
     .note-item {
@@ -78,27 +115,69 @@
 
   <div class="container">
     <header>
-      <h1>Kruidenhoek Dashboard</h1>
-      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Stadslandbouw Arnhem</p>
+      <h1>Stadslandbouw Arnhem</h1>
+      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Kruidenhoek Dashboard</p>
     </header>
 
-    <!-- Sectie: Actieve Opmerkingen & Aandachtspunten -->
-    <div class="card">
-      <h2>💡 Actieve Opmerkingen & Aandachtspunten</h2>
-      <div id="notesContainer" class="notes-list">
-        <div class="loading">Opmerkingen ophalen uit het sheet...</div>
+    <!-- Navigatie Knoppen -->
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
+      <button class="nav-btn" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
+      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Plant Logboeken</button>
+    </div>
+
+    <!-- Tab 1: Actieve Opmerkingen -->
+    <div id="opmerkingen" class="tab-content active">
+      <div class="card">
+        <h2>💡 Actieve Opmerkingen & Aandachtspunten</h2>
+        <div id="notesContainer" class="notes-list">
+          <div class="loading">Opmerkingen ophalen uit het sheet...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Wiki & Zoeken -->
+    <div id="wiki" class="tab-content">
+      <div class="card">
+        <h2>🔍 Wiki & Zoeken</h2>
+        <p>Zoekfunctie en wiki-gegevens worden hier geladen.</p>
+      </div>
+    </div>
+
+    <!-- Tab 3: Veldinvoer -->
+    <div id="veldinvoer" class="tab-content">
+      <div class="card">
+        <h2>📝 Veldinvoer</h2>
+        <p>Formulier voor veldinvoer.</p>
+      </div>
+    </div>
+
+    <!-- Tab 4: Plant Logboeken -->
+    <div id="logboeken" class="tab-content">
+      <div class="card">
+        <h2>📁 Planttabbladen & Dagboeken</h2>
+        <p>Overzicht van plant logboeken.</p>
       </div>
     </div>
 
   </div>
 
   <script>
-    // Jouw Google Apps Script Web App URL
+    // Plak hieronder eventueel je eigen web-app URL als die afwijkt
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
 
     window.addEventListener('DOMContentLoaded', function() {
       loadActiveNotes();
     });
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
 
     function loadActiveNotes() {
       const container = document.getElementById('notesContainer');
@@ -127,7 +206,6 @@
       for (var i = 0; i < notes.length; i++) {
         var item = notes[i];
         
-        // Bouw de datum- en tijdsweergave op
         var dateTimeStr = '';
         if (item.datum) {
           dateTimeStr += '📅 ' + item.datum;
