@@ -128,15 +128,15 @@
 
     <!-- Navigatie Knoppen (Tabs) -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('wiki')">🔍 Kruid Opzoeken</button>
-        <button class="tab-btn" onclick="switchTab('form')">✍️ Veldinvoer Doen</button>
+        <button class="tab-btn active" onclick="switchTab('wiki', event)">🔍 Kruid Opzoeken</button>
+        <button class="tab-btn" onclick="switchTab('form', event)">✍️ Veldinvoer Doen</button>
     </div>
 
     <!-- SECTIE 1: WIKI / OPROEPEN VAN DETAILS -->
     <div id="wiki-section" class="section active">
         <div class="card">
             <label for="zoekKruid">Zoek een kruidensoort:</label>
-            <input type="text" id="zoekKruid" placeholder="Bijv. Rozemarijn, Basilicum, Munt..." onkeyup="zoekKruidInDatabase()">
+            <input type="text" id="zoekKruid" placeholder="Bijv. Rozemarijn, Basilicum, Munt...">
             
             <div id="wikiContent" class="wiki-result" style="display: none;">
                 <h3 id="resNaam">--</h3>
@@ -198,7 +198,6 @@
 </div>
 
 <script>
-    // Voorbeeld database-array direct ingebouwd in de website voor razendsnel opzoeken!
     const kruidenDatabase = [
         { naam: "Basilicum", lat: "Ocimum basilicum", functie: "Smaakmaker", beschr: "Aromatische, malse bladgroente met warme smaak", stand: "Zonnig en beschut", grond: "Voedzame, humusrijke grond", snoei: "Nvt (eenjarig), regelmatig toppen", med: "Licht krampstillend en spijsverteringsbevorderend", waarschuwing: "Geen specifieke risico's bij normale culinaire consumptie" },
         { naam: "Bieslook", lat: "Allium schoenoprasum", functie: "Smaakmaker", beschr: "Vaste plant met holle sprieten en eetbare paarse bloemen", stand: "Zonnig tot halfschaduw", grond: "Voedzaam en vochthoudend", snoei: "Na de bloei strak terugsnijden", med: "Bevordert de eetlust en milde bloeddrukverlagende werking", waarschuwing: "Overmatig gebruik kan lichte maagirritatie geven" },
@@ -208,7 +207,7 @@
         { naam: "Salie", lat: "Salvia officinalis", functie: "Smaakmaker / Medicinaal", beschr: "Vaste struik met grijze, fluweelachtige blaadjes", stand: "Zonnig", grond: "Droge, kalkrijke grond", snoei: "Na de bloei en in het voorjaar terugsnoeien", med: "Sterk ontstekingsremmend bij keelpijn, remt transpiratie", waarschuwing: "Niet gebruiken bij borstvoeding, zwangerschap of epilepsie" }
     ];
 
-    function switchTab(tabName) {
+    function switchTab(tabName, event) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         
@@ -219,10 +218,6 @@
             document.getElementById('form-section').classList.add('active');
             event.target.classList.add('active');
         }
-    }
-
-    function zoekKruidInDatabase() {
-        const query = document.getElementById('zoekKruid.value').toLowerCase().trim(); // fix hieronder
     }
 
     document.getElementById('zoekKruid').addEventListener('input', function(e) {
@@ -257,7 +252,7 @@
         }
     });
 
-    // Formulier verzendlogica (wordt later gekoppeld aan je Google Apps Script Web App URL)
+    // Vervang onderstaande URL met je eigen Google Apps Script Web App URL
     const WEB_APP_URL = "JOUW_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HIER";
 
     document.getElementById('kruidenForm').addEventListener('submit', function(e) {
