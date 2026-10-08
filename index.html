@@ -90,7 +90,7 @@
       border: 1px solid #ccc;
       border-radius: 6px;
       box-sizing: border-box;
-      font-size: 1rem; /* Voorkomt automatisch inzoomen op iOS */
+      font-size: 1rem;
     }
     textarea { resize: vertical; height: 90px; }
     
@@ -168,12 +168,12 @@
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
-    <!-- Navigatie Knoppen (Mobiel vriendelijk raster) -->
+    <!-- Navigatie Knoppen (zonder inline onclick om errors te voorkomen) -->
     <div class="nav-tabs">
-      <button class="nav-btn active" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
-      <button class="nav-btn" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
-      <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
-      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Alle Reacties</button>
+      <button class="nav-btn active" data-target="opmerkingen">💡 Opmerkingen</button>
+      <button class="nav-btn" data-target="wiki">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn" data-target="veldinvoer">📝 Veldinvoer</button>
+      <button class="nav-btn" data-target="logboeken">📁 Alle Reacties</button>
     </div>
 
     <!-- Tab 1: Actieve Opmerkingen -->
@@ -189,7 +189,7 @@
       <div class="card">
         <h2>🔍 Planten Wiki & Veld-Dagboek</h2>
         <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam of vak (bijv. Rozemarijn, K1)..." oninput="filterWiki()">
+          <input type="text" id="searchInput" placeholder="Typ kruidnaam of vak (bijv. Rozemarijn, K1)...">
         </div>
         <div id="wikiContainer">
           <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam (bijv. Rozemarijn, Tijm) om de officiële teeltinfo en bijbehorende velddagboeken te bekijken.</p>
@@ -201,7 +201,7 @@
     <div id="veldinvoer" class="tab-content">
       <div class="card">
         <h2>📝 Veldinvoer Formulier</h2>
-        <form id="fieldForm" onsubmit="handleFormSubmit(event)">
+        <form id="fieldForm">
           <div class="form-group">
             <label for="naam">Je Naam:</label>
             <input type="text" id="naam" required placeholder="Bijv. Jan">
@@ -267,6 +267,27 @@
     window.addEventListener('DOMContentLoaded', function() {
       sessionStorage.removeItem('kruidenhoek_data');
       sessionStorage.removeItem('kruidenhoek_time');
+
+      // Veilige Event Listeners voor navigatieknoppen
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const targetId = this.getAttribute('data-target');
+          switchTab(targetId, this);
+        });
+      });
+
+      // Zoekveld listener
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', filterWiki);
+      }
+
+      // Formulier submit listener
+      const fieldForm = document.getElementById('fieldForm');
+      if (fieldForm) {
+        fieldForm.addEventListener('submit', handleFormSubmit);
+      }
+
       loadDashboardData();
     });
 
@@ -274,8 +295,9 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
       
-      document.getElementById(tabId).classList.add('active');
-      btn.classList.add('active');
+      const targetTab = document.getElementById(tabId);
+      if (targetTab) targetTab.classList.add('active');
+      if (btn) btn.classList.add('active');
     }
 
     function loadDashboardData() {
@@ -301,7 +323,8 @@
 
           displayLogs(data);
           filterWiki();
-          document.getElementById('timestampInfo').textContent = 'Gesynchroniseerd: ' + now;
+          const timestampInfo = document.getElementById('timestampInfo');
+          if (timestampInfo) timestampInfo.textContent = 'Gesynchroniseerd: ' + now;
         })
         .catch(err => {
           clearTimeout(timeoutId);
@@ -345,7 +368,6 @@
         let idxKruid = findColumnIndex(['kruid', 'plant', 'soort']);
         let idxVak = findColumnIndex(['vak']);
 
-        // Bouw ruwe tabellen voor tab 4
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         logboek.forEach((row, index) => {
           logboekenHtml += `<tr>`;
@@ -364,7 +386,6 @@
         });
         logboekenHtml += `</table></div>`;
 
-        // Bouw overzicht voor tab 1 (Recente Opmerkingen)
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
           let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
@@ -403,7 +424,8 @@
     }
 
     function filterWiki() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const searchInputElem = document.getElementById('searchInput');
+      const query = searchInputElem ? searchInputElem.value.toLowerCase().trim() : '';
       const container = document.getElementById('wikiContainer');
       
       if (!globalPlantData || globalPlantData.length === 0) {
@@ -412,9 +434,7 @@
       }
 
       let html = '';
-      let kruidenhoekFound = false;
 
-      // 1. Zoek in het tabblad 'Kruidenhoek' (Officiële plantinfo)
       globalPlantData.forEach(source => {
         let sheetName = String(source.sheetName || '').toLowerCase();
         let logboek = source.logboek;
@@ -431,7 +451,6 @@
           let iFunctie = colIdx('functie');
           let iBeschrijving = colIdx('algemene beschrijving');
           let iStandplaats = colIdx('standplaats');
-          let iGrond = colIdx('grondsoort');
           let iSnoei = colIdx('snoei');
           let iOogst = colIdx('oogst');
           let iToepassing = colIdx('toepassing');
@@ -442,7 +461,6 @@
             let rowString = row.join(' ').toLowerCase();
 
             if (rowString.includes(query) || query === '') {
-              kruidenhoekFound = true;
               let soort = iSoort !== -1 ? row[iSoort] : (row[0] || 'Onbekend');
               let latijn = iLatijn !== -1 ? row[iLatijn] : '';
               let functie = iFunctie !== -1 ? row[iFunctie] : '';
@@ -474,7 +492,6 @@
         }
       });
 
-      // 2. Zoek in de formulierreacties (Veld-dagboek) gekoppeld aan de zoekopdracht
       let dagboekHtml = '';
       if (query !== '') {
         globalPlantData.forEach(source => {
@@ -529,15 +546,15 @@
             name: file.name,
             type: file.type
           };
-          sendDataToScript(payload);
+          sendDataToScript(payload, submitBtn);
         };
         reader.readAsDataURL(file);
       } else {
-        sendDataToScript(payload);
+        sendDataToScript(payload, submitBtn);
       }
     }
 
-    function sendDataToScript(payload) {
+    function sendDataToScript(payload, submitBtn) {
       fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
