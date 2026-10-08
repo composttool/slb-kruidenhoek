@@ -44,7 +44,7 @@
     
     /* Stijl voor Actieve Opmerkingen */
     .notes-list {
-      max-height: 300px;
+      max-height: 350px;
       overflow-y: auto;
     }
     .note-item {
@@ -63,6 +63,9 @@
       margin-bottom: 4px;
       font-size: 0.85rem;
     }
+    .note-content {
+      white-space: pre-wrap;
+    }
     .loading {
       text-align: center;
       color: #666;
@@ -78,7 +81,7 @@
       <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Stadslandbouw Arnhem</p>
     </header>
 
-    <!-- Sectie: Actieve Opmerkingen -->
+    <!-- Sectie: Actieve Opmerkingen & Aandachtspunten -->
     <div class="card">
       <h2>💡 Actieve Opmerkingen & Aandachtspunten</h2>
       <div id="notesContainer" class="notes-list">
@@ -86,18 +89,15 @@
       </div>
     </div>
 
-    <!-- Plaats hieronder jouw andere onderdelen zoals de Wiki, Veldinvoer en Logboeken -->
-    <!-- <div class="card"><h2>🌱 Veldinvoer</h2>...</div> -->
-    <!-- <div class="card"><h2>📖 Wiki & Zoeken</h2>...</div> -->
+    <!-- Plaats hieronder eventueel jouw overige componenten zoals Veldinvoer, Wiki en Logboeken -->
 
   </div>
 
   <script>
     // ==========================================
-    // PLAK HIER JOUW APPS SCRIPT WEB APP URL (voor GitHub Pages)
-    // Laat leeg ('') als de app puur binnen Google Apps Script draait.
+    // JOUW GOOGLE APPS SCRIPT WEB APP URL IS HIER INGEVULD
     // ==========================================
-    const SCRIPT_URL = 'JOUW_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HIER';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
 
     window.addEventListener('DOMContentLoaded', function() {
       loadActiveNotes();
@@ -106,17 +106,14 @@
     function loadActiveNotes() {
       const container = document.getElementById('notesContainer');
 
-      // Als de URL is ingevuld, gebruiken we fetch (voor GitHub Pages)
-      if (SCRIPT_URL && SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec') {
+      if (SCRIPT_URL && SCRIPT_URL !== '') {
         fetch(SCRIPT_URL + '?action=getNotes')
           .then(response => response.json())
           .then(data => displayActiveNotes(data))
           .catch(err => {
-            container.innerHTML = '<div style="color: red;">Fout bij ophalen via Web App URL: ' + err.message + '</div>';
+            container.innerHTML = '<div style="color: red;">Fout bij ophalen van opmerkingen: ' + err.message + '</div>';
           });
-      } 
-      // Anders gebruiken we google.script.run (als het direct in Apps Script gedraaid wordt)
-      else if (typeof google !== 'undefined' && google.script && google.script.run) {
+      } else if (typeof google !== 'undefined' && google.script && google.script.run) {
         google.script.run
           .withSuccessHandler(displayActiveNotes)
           .withFailureHandler(err => {
@@ -124,7 +121,7 @@
           })
           .getActiveNotesData();
       } else {
-        container.innerHTML = '<div style="color: #c62828;">Geen SCRIPT_URL ingesteld en niet in Apps Script omgeving. Vul je Web App URL in!</div>';
+        container.innerHTML = '<div style="color: #c62828;">Geen SCRIPT_URL ingesteld.</div>';
       }
     }
 
@@ -139,9 +136,17 @@
       var html = '';
       for (var i = 0; i < notes.length; i++) {
         var item = notes[i];
+        var dateTimeStr = '';
+        if (item.datum) {
+          dateTimeStr += '📅 ' + item.datum;
+          if (item.tijd) {
+            dateTimeStr += ' ' + item.tijd;
+          }
+        }
+        
         html += '<div class="note-item">';
-        html += '<div class="note-header"><span>🌿 ' + escapeHtml(item.plant) + '</span><span>📅 ' + escapeHtml(item.datum) + '</span></div>';
-        html += '<div>' + escapeHtml(item.note) + '</div>';
+        html += '<div class="note-header"><span>🌿 ' + escapeHtml(item.plant) + '</span><span>' + escapeHtml(dateTimeStr) + '</span></div>';
+        html += '<div class="note-content">' + escapeHtml(item.note) + '</div>';
         html += '</div>';
       }
       container.innerHTML = html;
