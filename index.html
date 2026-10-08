@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V3.4-WIKI-FIRST)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.5)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -177,11 +177,11 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard <span style="opacity: 0.7;">(V3.4)</span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.5 <span id="headerTimestamp" style="opacity: 0.8;">(8-10-2026 15:55)</span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
-    <!-- Menuvolgorde aangepast: Wiki staat nu als eerste -->
+    <!-- Menu: Wiki staat als eerste voor snelle toegang -->
     <div class="nav-tabs">
       <button class="nav-btn active" data-target="wiki">🔍 Wiki & Zoeken</button>
       <button class="nav-btn" data-target="opmerkingen">💡 Opmerkingen</button>
@@ -208,9 +208,8 @@
         <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
         <h2>💡 Recente Acties & Veldnotities</h2>
         
-        <!-- Knop toegevoegd om het ophalen zelf te starten -->
         <div id="loadActionContainer">
-          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties ophalen</button>
+          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
         </div>
 
         <div id="notesContainer"></div>
@@ -254,11 +253,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="ziekte">Ziekte of Waarneming:</label>
+            <label for="ziekte">Ziekte of waarneming:</label>
             <input type="text" id="ziekte" placeholder="Bijv. Geen of Meeldauw">
           </div>
           <div class="form-group">
-            <label for="notities">Notities of Opmerkingen:</label>
+            <label for="notities">Notities of opmerkingen:</label>
             <textarea id="notities" placeholder="Typ hier je opmerkingen..."></textarea>
           </div>
           <div class="form-group">
@@ -288,6 +287,10 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
+      // Stel huidige timestamp in
+      const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
+      document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
+
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const targetId = this.getAttribute('data-target');
@@ -305,7 +308,7 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      // Controleer of er al cache data is opgeslagen in de browser
+      // Probeer direct data uit browser cache te laden voor maximale snelheid
       const cachedData = sessionStorage.getItem('kruidenhoek_data');
       const cachedTime = sessionStorage.getItem('kruidenhoek_time');
 
@@ -316,7 +319,6 @@
         if (cachedTime) {
           document.getElementById('timestampInfo').textContent = 'Geladen uit cache: ' + cachedTime;
         }
-        // Verberg laad-knoppen als er al data is
         hideLoadButtons();
       }
     });
@@ -437,7 +439,7 @@
           });
           logboekenHtml += `</tr>`;
         });
-        logboekenHtml += `</table></div>`;
+        logboekenHtml += `</div>`;
 
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
@@ -459,9 +461,11 @@
           if (vak) details.push('Vak: ' + vak);
           if (kruid) details.push('Kruid: ' + kruid);
           if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
-            details.push('Ziekte: ' + ziekte);
+            details.push('Ziekte of waarneming: ' + ziekte);
           }
-          if (notitie) details.push('Notitie: ' + notitie);
+          if (notitie && String(notitie).trim() !== '') {
+            details.push('Notities of opmerkingen: ' + notitie);
+          }
 
           allNotesHtml += `
             <div class="log-entry">
