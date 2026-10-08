@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem</title>
+  <title>Kruidenhoek Dashboard - Stadslandbouw Arnhem (V2.6-MASTER)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -125,7 +125,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Kruidenhoek Dashboard</p>
+      <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Kruidenhoek Dashboard <span style="opacity: 0.7; font-size: 0.75rem;">(V2.6-MASTER)</span></p>
       <p id="timestampInfo" style="margin: 4px 0 0 0; font-size: 0.75rem; opacity: 0.85;"></p>
     </header>
 
@@ -226,6 +226,10 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
+      // Forceer een schone start van de sessie-cache bij openen
+      sessionStorage.removeItem('kruidenhoek_data');
+      sessionStorage.removeItem('kruidenhoek_time');
+      
       loadDashboardData();
     });
 
@@ -238,40 +242,38 @@
     }
 
     function loadDashboardData() {
-      // Controleer of er al gecachete data in de sessie staat voor snelle weergave
-      const cachedData = sessionStorage.getItem('kruidenhoek_data');
-      const cachedTime = sessionStorage.getItem('kruidenhoek_time');
+      const notesContainer = document.getElementById('notesContainer');
+      notesContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets... Even geduld.</div>';
 
-      if (cachedData && cachedTime) {
-        globalPlantData = JSON.parse(cachedData);
-        displayLogs(globalPlantData);
-        filterWiki();
-        document.getElementById('timestampInfo').textContent = 'Laatst geladen (uit cache): ' + cachedTime;
-        return;
-      }
-
-      fetchDataFromScript();
-    }
-
-    function fetchDataFromScript() {
       if (!SCRIPT_URL) return;
 
-      fetch(SCRIPT_URL)
-        .then(response => response.json())
+      // Time-out beveiliging van 15 seconden tegen oneindig laden
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      fetch(SCRIPT_URL, { signal: controller.signal })
+        .then(response => {
+          clearTimeout(timeoutId);
+          return response.json();
+        })
         .then(data => {
           globalPlantData = data;
           const now = new Date().toLocaleString('nl-NL');
           
-          // Sla op in de browser-sessie zodat volgende tabwissels of laadacties direct gaan
           sessionStorage.setItem('kruidenhoek_data', JSON.stringify(data));
           sessionStorage.setItem('kruidenhoek_time', now);
 
           displayLogs(data);
           filterWiki();
-          document.getElementById('timestampInfo').textContent = 'Laatst gesynchroniseerd: ' + now;
+          document.getElementById('timestampInfo').textContent = 'Laatst gesynchroniseerd: ' + now + ' (V2.6)';
         })
         .catch(err => {
-          document.getElementById('notesContainer').innerHTML = '<div style="color: red;">Fout bij ophalen data: ' + err.message + '</div>';
+          clearTimeout(timeoutId);
+          if (err.name === 'AbortError') {
+            notesContainer.innerHTML = '<div style="color: red;">Het ophalen duurt te lang (time-out). Controleer of de Google Apps Script URL correct is.</div>';
+          } else {
+            notesContainer.innerHTML = '<div style="color: red;">Fout bij ophalen data: ' + err.message + '</div>';
+          }
         });
     }
 
@@ -315,4 +317,77 @@
           
           plant.logboek.forEach((row, index) => {
             logboekenHtml += `<tr>`;
-            row
+            row.forEach(cell => {
+              let cellContent = cell !== null ? String(cell) : '';
+              if (cellContent.startsWith('http')) {
+                cellContent = `<a href="${cellContent}" target="_blank">🔗 Foto/Link</a>`;
+              }
+              if (index === 0) {
+                logboekenHtml += `<th style="background: #e8f5e9; padding: 6px; text-align: left;">${cellContent}</th>`;
+              } else {
+                logboekenHtml += `<td style="padding: 6px;">${cellContent}</td>`;
+              }
+            });
+            logboekenHtml += `</tr>`;
+          });
+          logboekenHtml += `</table>`;
+
+          for (let i = 1; i < plant.logboek.length; i++) {
+            let row = plant.logboek[i];
+            
+            let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
+            let naam = idxNaam !== -1 ? row[idxNaam] : (row[1] || 'Onbekend');
+            let ziekte = idxZiekte !== -1 ? row[idxZiekte] : '';
+            let notitie = idxNotitie !== -1 ? row[idxNotitie] : '';
+            let foto = idxFoto !== -1 ? row[idxFoto] : '';
+
+            if (!foto) {
+              row.forEach(cell => {
+                if (cell && String(cell).startsWith('http')) {
+                  foto = cell;
+                }
+              });
+            }
+
+            let bericht = '';
+            if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
+              bericht += '<strong>Ziekte/Waarneming:</strong> ' + ziekte + '<br>';
+            }
+            if (notitie) {
+              bericht += '<strong>Notitie:</strong> ' + notitie;
+            }
+
+            if (bericht || ziekte) {
+              allNotesHtml += `
+                <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
+                  <strong>👤 ${naam}</strong> (${plant.plantNaam}) - <span style="font-size: 0.8rem; color: #555;">${datum}</span><br>
+                  ${bericht}
+                  ${foto ? '<br><a href="' + foto + '" target="_blank">🔗 Bekijk foto</a>' : ''}
+                </div>`;
+            }
+          }
+        } else {
+          logboekenHtml += `<p style="font-style: italic; color: #666;">Nog geen logboekregels voor dit tabblad.</p>`;
+        }
+      });
+
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen recente opmerkingen gevonden.</p>';
+      logboekenContainer.innerHTML = logboekenHtml;
+    }
+
+    function filterWiki() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const container = document.getElementById('wikiContainer');
+      
+      if (!globalPlantData || globalPlantData.length === 0) {
+        container.innerHTML = '<p>Gegevens worden geladen...</p>';
+        return;
+      }
+
+      let html = '';
+
+      globalPlantData.forEach(plant => {
+        let plantNaam = plant.plantNaam.toLowerCase();
+        let matchedRows = [];
+
+        if (plant.logboek && plant.logboek.
