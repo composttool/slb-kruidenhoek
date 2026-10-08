@@ -38,18 +38,19 @@
         
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 5px;
             margin-bottom: 15px;
         }
         .tab-btn {
             flex: 1;
-            padding: 10px;
+            padding: 8px 5px;
             background: #ccc;
             border: none;
             border-radius: var(--border-radius);
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
+            text-align: center;
         }
         .tab-btn.active {
             background: var(--primary);
@@ -106,6 +107,35 @@
         .wiki-item { margin-bottom: 8px; font-size: 0.9rem; }
         .wiki-item strong { color: #555; }
         
+        /* Stijlen voor de plantenlijst & logboek */
+        .plant-list-item {
+            padding: 10px 12px;
+            background: #f1f8f1;
+            border: 1px solid #c8e6c9;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--primary-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .plant-list-item:hover { background: #e2f0e2; }
+        
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        .log-table th, .log-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        .log-table th { background-color: #e8f5e9; color: var(--primary-dark); }
+
         .status-msg {
             margin-top: 15px;
             padding: 10px;
@@ -128,11 +158,12 @@
 
     <!-- Navigatie Knoppen (Tabs) -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('wiki', event)">🔍 Kruid Opzoeken</button>
-        <button class="tab-btn" onclick="switchTab('form', event)">✍️ Veldinvoer Doen</button>
+        <button class="tab-btn active" onclick="switchTab('wiki', event)">🔍 Wiki</button>
+        <button class="tab-btn" onclick="switchTab('form', event)">✍️ Veldinvoer</button>
+        <button class="tab-btn" onclick="switchTab('logs', event)">📂 Plant Logboeken</button>
     </div>
 
-    <!-- SECTIE 1: WIKI / OPROEPEN VAN DETAILS -->
+    <!-- SECTIE 1: WIKI -->
     <div id="wiki-section" class="section active">
         <div class="card">
             <label for="zoekKruid">Zoek een kruidensoort:</label>
@@ -147,9 +178,9 @@
                 <div class="wiki-item"><strong>Grondsoort & Voeding:</strong> <span id="resGrond">--</span></div>
                 <div class="wiki-item"><strong>Beste snoeimoment:</strong> <span id="resSnoei">--</span></div>
                 <div class="wiki-item"><strong>Medicinaal / Werking:</strong> <span id="resMed">--</span></div>
-                <div class="wiki-item" style="color: #c62828;"><strong>Waarschuwing / Contra-indicatie:</strong> <span id="resWaarschuwing">--</span></div>
+                <div class="wiki-item" style="color: #c62828;"><strong>Waarschuwing:</strong> <span id="resWaarschuwing">--</span></div>
             </div>
-            <p id="geenResultaat" style="font-style: italic; color: #666; display: none; text-align: center; margin-top: 10px;">Geen kruid gevonden met deze naam.</p>
+            <p id="geenResultaat" style="font-style: italic; color: #666; display: none; text-align: center; margin-top: 10px;">Geen kruid gevonden.</p>
         </div>
     </div>
 
@@ -195,16 +226,36 @@
             <div id="statusMsg" class="status-msg"></div>
         </div>
     </div>
+
+    <!-- SECTIE 3: PLANT TABBLADEN & LOGBOEKEN -->
+    <div id="logs-section" class="section">
+        <div class="card">
+            <h3 style="margin-top:0; color:var(--primary-dark);">Planttabbladen & Dagboeken</h3>
+            <p style="font-size:0.85rem; color:#666;">Klik op een plant om het logboek uit de sheet in te zien:</p>
+            
+            <button class="action-btn" onclick="laadPlantData()" style="margin-bottom: 15px; font-size: 0.9rem; padding: 8px;">🔄 Ververs Plantenlijst</button>
+            
+            <div id="plantenLijstContainer">
+                <p style="text-style: italic; color: #666;">Klik op 'Ververs Plantenlijst' om data uit de Google Sheet te laden.</p>
+            </div>
+            
+            <div id="enkelLogboekContainer" style="display: none; margin-top: 15px;">
+                <button onclick="terugNaarLijst()" style="background: #666; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">← Terug naar lijst</button>
+                <h4 id="geselecteerdePlantTitel" style="color: var(--primary-dark); margin: 5px 0;"></h4>
+                <div id="tabelContainer" style="overflow-x: auto;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     const kruidenDatabase = [
-        { naam: "Basilicum", lat: "Ocimum basilicum", functie: "Smaakmaker", beschr: "Aromatische, malse bladgroente met warme smaak", stand: "Zonnig en beschut", grond: "Voedzame, humusrijke grond", snoei: "Nvt (eenjarig), regelmatig toppen", med: "Licht krampstillend en spijsverteringsbevorderend", waarschuwing: "Geen specifieke risico's bij normale culinaire consumptie" },
-        { naam: "Bieslook", lat: "Allium schoenoprasum", functie: "Smaakmaker", beschr: "Vaste plant met holle sprieten en eetbare paarse bloemen", stand: "Zonnig tot halfschaduw", grond: "Voedzaam en vochthoudend", snoei: "Na de bloei strak terugsnijden", med: "Bevordert de eetlust en milde bloeddrukverlagende werking", waarschuwing: "Overmatig gebruik kan lichte maagirritatie geven" },
-        { naam: "Rozemarijn", lat: "Salvia rosmarinus", functie: "Smaakmaker / Medicinaal", beschr: "Groenblijvende, geurige struik met leerachtige naaldjes", stand: "Vol zonlicht, beschut", grond: "Droog, zanderig, kalkrijk", snoei: "In het voorjaar na de vorst lichte vormsnoei", med: "Stimuleert de bloedsomloop, verbetert het geheugen", waarschuwing: "Niet gebruiken bij epilepsie of in hoge doses tijdens zwangerschap" },
-        { naam: "Munt", lat: "Mentha", functie: "Smaakmaker / Medicinaal", beschr: "Sterk geurend, fris kruid met lange ondergrondse uitlopers", stand: "Halfschaduw tot schaduw", grond: "Vochthoudende, humusrijke grond", snoei: "Na de bloei grondig terugsnoeien", med: "Verlicht maag- en darmkrampen, verzacht misselijkheid", waarschuwing: "Vermijd sterke pepermuntolie bij jonge kinderen in het gezicht" },
-        { naam: "Tijm", lat: "Thymus vulgaris", functie: "Smaakmaker / Medicinaal", beschr: "Laag, houtig struikje met minuscule aromatische blaadjes", stand: "Vol zonlicht", grond: "Kalkrijk, zandig, zeer goed doorlatend", snoei: "Na de bloei licht terugsnoeien (niet op oud hout)", med: "Krachtig antiseptisch, slijmoplossend bij verkoudheid", waarschuwing: "Geconcentreerde tijmolie niet onverdund innemen" },
-        { naam: "Salie", lat: "Salvia officinalis", functie: "Smaakmaker / Medicinaal", beschr: "Vaste struik met grijze, fluweelachtige blaadjes", stand: "Zonnig", grond: "Droge, kalkrijke grond", snoei: "Na de bloei en in het voorjaar terugsnoeien", med: "Sterk ontstekingsremmend bij keelpijn, remt transpiratie", waarschuwing: "Niet gebruiken bij borstvoeding, zwangerschap of epilepsie" }
+        { naam: "Basilicum", lat: "Ocimum basilicum", functie: "Smaakmaker", beschr: "Aromatische, malse bladgroente met warme smaak", stand: "Zonnig en beschut", grond: "Voedzame, humusrijke grond", snoei: "Nvt (eenjarig), regelmatig toppen", med: "Licht krampstillend en spijsverteringsbevorderend", waarschuwing: "Geen specifieke risico's" },
+        { naam: "Bieslook", lat: "Allium schoenoprasum", functie: "Smaakmaker", beschr: "Vaste plant met holle sprieten en eetbare paarse bloemen", stand: "Zonnig tot halfschaduw", grond: "Voedzaam en vochthoudend", snoei: "Na de bloei strak terugsnijden", med: "Bevordert de eetlust", waarschuwing: "Overmatig gebruik kan lichte maagirritatie geven" },
+        { naam: "Rozemarijn", lat: "Salvia rosmarinus", functie: "Smaakmaker / Medicinaal", beschr: "Groenblijvende, geurige struik met leerachtige naaldjes", stand: "Vol zonlicht, beschut", grond: "Droog, zanderig, kalkrijk", snoei: "In het voorjaar na de vorst lichte vormsnoei", med: "Stimuleert de bloedsomloop", waarschuwing: "Niet gebruiken bij epilepsie" },
+        { naam: "Munt", lat: "Mentha", functie: "Smaakmaker / Medicinaal", beschr: "Sterk geurend, fris kruid met lange ondergrondse uitlopers", stand: "Halfschaduw tot schaduw", grond: "Vochthoudende, humusrijke grond", snoei: "Na de bloei grondig terugsnoeien", med: "Verlicht maag- en darmkrampen", waarschuwing: "Vermijd sterke pepermuntolie bij jonge kinderen" },
+        { naam: "Tijm", lat: "Thymus vulgaris", functie: "Smaakmaker / Medicinaal", beschr: "Laag, houtig struikje met minuscule aromatische blaadjes", stand: "Vol zonlicht", grond: "Kalkrijk, zandig, zeer goed doorlatend", snoei: "Na de bloei licht terugsnoeien", med: "Krachtig antiseptisch, slijmoplossend", waarschuwing: "Geconcentreerde tijmolie niet onverdund innemen" },
+        { naam: "Salie", lat: "Salvia officinalis", functie: "Smaakmaker / Medicinaal", beschr: "Vaste struik met grijze, fluweelachtige blaadjes", stand: "Zonnig", grond: "Droge, kalkrijke grond", snoei: "Na de bloei en in het voorjaar terugsnoeien", med: "Sterk ontstekingsremmend bij keelpijn", waarschuwing: "Niet gebruiken bij zwangerschap" }
     ];
 
     function switchTab(tabName, event) {
@@ -213,11 +264,12 @@
         
         if(tabName === 'wiki') {
             document.getElementById('wiki-section').classList.add('active');
-            event.target.classList.add('active');
-        } else {
+        } else if(tabName === 'form') {
             document.getElementById('form-section').classList.add('active');
-            event.target.classList.add('active');
+        } else if(tabName === 'logs') {
+            document.getElementById('logs-section').classList.add('active');
         }
+        event.target.classList.add('active');
     }
 
     document.getElementById('zoekKruid').addEventListener('input', function(e) {
@@ -252,9 +304,10 @@
         }
     });
 
-    // Vervang onderstaande URL met je eigen Google Apps Script Web App URL
+    // VERVANG ONDERSTAANDE URL MET JOUW GOOGLE APPS SCRIPT WEB APP URL
     const WEB_APP_URL = "JOUW_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HIER";
 
+    // Formulier verzenden naar Sheet
     document.getElementById('kruidenForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
@@ -292,6 +345,73 @@
             btn.textContent = "Opslaan & Verzenden";
         });
     });
+
+    // Plantdata ophalen uit Google Sheets
+    let globalePlantData = [];
+
+    function laadPlantData() {
+        const container = document.getElementById('plantenLijstContainer');
+        container.innerHTML = "<p style='text-align:center;'>Gegevens ophalen uit Google Sheet...</p>";
+
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                globalePlantData = data;
+                container.innerHTML = "";
+                
+                if(data.length === 0) {
+                    container.innerHTML = "<p style='font-style:italic;'>Geen planttabbladen gevonden in de sheet.</p>";
+                    return;
+                }
+
+                data.forEach((plant, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'plant-list-item';
+                    item.innerHTML = `<span>🌱 ${plant.plantNaam}</span> <span style="font-size:0.8rem; color:#666;">Bekijk logboek →</span>`;
+                    item.onclick = () => toonPlantLogboek(index);
+                    container.appendChild(item);
+                });
+            })
+            .catch(err => {
+                container.innerHTML = "<p style='color:red;'>Fout bij ophalen van plantdata: " + err + "</p>";
+            });
+    }
+
+    function toonPlantLogboek(index) {
+        const plant = globalePlantData[index];
+        document.getElementById('plantenLijstContainer').style.display = 'none';
+        document.getElementById('enkelLogboekContainer').style.display = 'block';
+        document.getElementById('geselecteerdePlantTitel').textContent = "Logboek: " + plant.plantNaam;
+
+        const tabelContainer = document.getElementById('tabelContainer');
+        if(!plant.logboek || plant.logboek.length === 0) {
+            tabelContainer.innerHTML = "<p>Geen logboekregels aanwezig.</p>";
+            return;
+        }
+
+        let html = '<table class="log-table"><tr>';
+        // Maak tabelkoppen van de eerste rij
+        plant.logboek[0].forEach(kop => {
+            html += `<th>${kop || ''}</th>`;
+        });
+        html += '</tr>';
+
+        // Maak rijen van de overige data
+        for(let i = 1; i < plant.logboek.length; i++) {
+            html += '<tr>';
+            plant.logboek[i].forEach(cel => {
+                html += `<td>${cel !== undefined ? cel : ''}</td>`;
+            });
+            html += '</tr>';
+        }
+        html += '</table>';
+        tabelContainer.innerHTML = html;
+    }
+
+    function terugNaarLijst() {
+        document.getElementById('enkelLogboekContainer').style.display = 'none';
+        document.getElementById('plantenLijstContainer').style.display = 'block';
+    }
 </script>
 
 </body>
