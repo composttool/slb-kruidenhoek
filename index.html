@@ -3,7 +3,7 @@
    Versie: 9-10-2026-1445
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                en dynamische header-herkenning voor logboeken & foto-knoppen.
+                dynamische header-herkenning, en automatische fallbacks.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -342,7 +342,7 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (MET DYNAMISCHE HEADERS) ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (MET DYNAMISCHE HEADERS & FALLBACKS) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -352,7 +352,6 @@
         let logboek = source.logboek;
         if (!logboek || !logboek.length) return;
 
-        // Dynamische kolomindexering op basis van kopteksten
         let headers = logboek[0].map(h => String(h).trim().toLowerCase());
         let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
         let idxNaam = headers.findIndex(h => h.includes('naam'));
@@ -377,30 +376,25 @@
           let row = logboek[i];
           
           let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
-          let naam = idxNaam > -1 && row[idxNaam] ? row[idxNaam] : 'Onbekend';
-          let vak = idxVak > -1 && row[idxVak] ? row[idxVak] : '-';
-          let kruid = idxKruid > -1 && row[idxKruid] ? row[idxKruid] : '';
+          let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
+          let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
+          let kruid = idxKruid > -1 && row[idxKruid] ? String(row[idxKruid]).trim() : '';
           let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
           let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
-          if (String(naam).startsWith('http')) naam = 'Onbekend';
-          if (String(vak).startsWith('http')) vak = '-';
+          row.forEach(cell => {
+            let c = cell !== null ? String(cell).trim() : '';
+            if (/^K[1-8]$/i.test(c)) vak = c;
+            if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
+          });
 
-          // Zoek in de hele rij naar een geldige foto-URL als deze ontbreekt
-          if (!foto || !foto.startsWith('http')) {
-            row.forEach(cell => {
-              let cellStr = cell !== null ? String(cell).trim() : '';
-              if (cellStr.startsWith('http://') || cellStr.startsWith('https://')) {
-                foto = cellStr;
-              }
-            });
-          }
+          if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
+          if (!vak) vak = 'K1';
 
           if (notitie.startsWith('http')) {
             notitie = '';
           }
 
-          // Filter lege regels (zonder opmerking en zonder foto)
           if (!notitie && (!foto || !foto.startsWith('http'))) {
             continue;
           }
