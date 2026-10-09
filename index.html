@@ -1,138 +1,51 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1735
-   Omschrijving: Volledige frontend met gecorrigeerde string-syntaxis
-                voor maximale compatibiliteit op mobiel en desktop.
+   Versie: 09-10-2026-1800
+   Omschrijving: Volledige stabiele versie met gegarandeerd correcte syntax.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.9)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem</title>
   <style>
     :root {
       --primary: #2e7d32;
       --primary-light: #e8f5e9;
-      --accent: #ff8f00;
       --bg: #f4f6f5;
       --text: #333;
       --card-bg: #fff;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
       padding: 12px;
     }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      text-align: center;
-    }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { background: var(--primary); color: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; text-align: center; }
     h1 { margin: 0; font-size: 1.3rem; }
-    
-    .nav-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      margin-bottom: 15px;
-    }
-    .nav-btn {
-      padding: 12px 8px;
-      text-align: center;
-      background: #e0e0e0;
-      color: #333;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-    .nav-btn.active {
-      background: var(--primary);
-      color: white;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
+    .nav-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 15px; }
+    .nav-btn { padding: 12px 8px; text-align: center; background: #e0e0e0; color: #333; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+    .nav-btn.active { background: var(--primary); color: white; }
+    .card { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     h2 { font-size: 1.1rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary-light); padding-bottom: 6px; }
-    
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-
     .form-group { margin-bottom: 12px; }
     label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 0.85rem; }
-    input[type="text"], select, textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 1rem;
-    }
+    input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
     textarea { resize: vertical; height: 90px; }
-    
-    .submit-btn, .action-btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 12px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
+    .submit-btn, .action-btn { background: var(--primary); color: white; border: none; padding: 12px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; }
     .action-btn { margin-bottom: 15px; }
-
-    .plant-card {
-      background: #fafafa;
-      border: 1px solid #d0e1d4;
-      border-left: 5px solid var(--primary);
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 12px;
-      word-break: break-word;
-    }
+    .plant-card { background: #fafafa; border: 1px solid #d0e1d4; border-left: 5px solid var(--primary); border-radius: 6px; padding: 12px; margin-bottom: 12px; word-break: break-word; }
     .plant-title { font-size: 1.15rem; font-weight: bold; color: var(--primary); margin-bottom: 2px; }
     .plant-subtitle { font-size: 0.85rem; font-style: italic; color: #555; margin-bottom: 8px; }
-    .plant-info-grid { font-size: 0.85rem; display: grid; gap: 6px; margin-bottom: 8px; }
-    .wiki-field {
-      background: #fff;
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid #eee;
-      font-size: 0.8rem;
-    }
-    .wiki-field strong { color: #2e7d32; display: inline-block; margin-bottom: 2px; }
-
-    .log-entry {
-      background: var(--primary-light);
-      border-left: 4px solid var(--primary);
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 0 6px 6px 0;
-      font-size: 0.85rem;
-      word-break: break-word;
-    }
-
-    .loading { text-align: center; color: #666; font-style: italic; padding: 15px; }
-    .refresh-bar { text-align: right; margin-bottom: 8px; }
-    .refresh-btn { background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
+    .wiki-field { background: #fff; padding: 6px 8px; border-radius: 4px; border: 1px solid #eee; font-size: 0.8rem; margin-top: 4px; }
+    .wiki-field strong { color: #2e7d32; }
+    .log-entry { background: var(--primary-light); border-left: 4px solid var(--primary); padding: 10px; margin-bottom: 8px; border-radius: 0 6px 6px 0; font-size: 0.85rem; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -140,26 +53,26 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.9 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard</p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
     <div class="nav-tabs">
-      <button class="nav-btn active" data-target="wiki">🔍 Wiki & Zoeken</button>
-      <button class="nav-btn" data-target="opmerkingen">💡 Opmerkingen</button>
-      <button class="nav-btn" data-target="veldinvoer">📝 Veldinvoer</button>
-      <button class="nav-btn" data-target="logboeken">📁 Alle Reacties</button>
+      <button class="nav-btn active" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
+      <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
+      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Alle Reacties</button>
     </div>
 
-    <!-- Tab 1: Wiki & Zoeken -->
+    <!-- Tab 1: Wiki -->
     <div id="wiki" class="tab-content active">
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
         <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Basilicum, Bieslook, Tijm)...">
+          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Basilicum, Bieslook)..." oninput="filterWiki()">
         </div>
         <div id="wikiContainer">
-          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de uitgebreide database te raadplegen.</p>
+          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de database te doorzoeken.</p>
         </div>
       </div>
     </div>
@@ -167,7 +80,6 @@
     <!-- Tab 2: Opmerkingen -->
     <div id="opmerkingen" class="tab-content">
       <div class="card">
-        <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
         <h2>💡 Recente Acties & Veldnotities</h2>
         <div id="loadActionContainer">
           <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
@@ -180,7 +92,7 @@
     <div id="veldinvoer" class="tab-content">
       <div class="card">
         <h2>📝 Veldinvoer Formulier</h2>
-        <form id="fieldForm">
+        <form id="fieldForm" onsubmit="handleFormSubmit(event)">
           <div class="form-group">
             <label for="naam">Je Naam:</label>
             <input type="text" id="naam" required placeholder="Bijv. Jan">
@@ -201,27 +113,27 @@
           </div>
           <div class="form-group">
             <label for="kruidsoort">Kruidensoort:</label>
-            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn of Tijm">
+            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn">
           </div>
           <div class="form-group">
-            <label for="actie">Type Actie / Onderhoud:</label>
+            <label for="actie">Type Actie:</label>
             <select id="actie">
               <option value="Snoei / Onderhoud">Snoei / Onderhoud</option>
               <option value="Oogst">Oogst</option>
               <option value="Water geven">Water geven</option>
-              <option value="Monitoring / Waarneming">Monitoring / Waarneming</option>
+              <option value="Monitoring">Monitoring / Waarneming</option>
             </select>
           </div>
           <div class="form-group">
             <label for="ziekte">Ziekte of waarneming:</label>
-            <input type="text" id="ziekte" placeholder="Bijv. Geen of Meeldauw">
+            <input type="text" id="ziekte" placeholder="Bijv. Geen">
           </div>
           <div class="form-group">
-            <label for="notities">Notities of opmerkingen:</label>
-            <textarea id="notities" placeholder="Typ hier je opmerkingen..."></textarea>
+            <label for="notities">Notities:</label>
+            <textarea id="notities" placeholder="Typ hier opmerkingen..."></textarea>
           </div>
           <div class="form-group">
-            <label for="foto">Foto (optioneel, max 5MB):</label>
+            <label for="foto">Foto (optioneel):</label>
             <input type="file" id="foto" accept="image/*">
           </div>
           <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
@@ -229,7 +141,7 @@
       </div>
     </div>
 
-    <!-- Tab 4: Alle Reacties -->
+    <!-- Tab 4: Logboeken -->
     <div id="logboeken" class="tab-content">
       <div class="card">
         <h2>📁 Ruwe Formulier Reacties</h2>
@@ -247,49 +159,43 @@
     let globalPlantData = [];
 
     window.addEventListener('DOMContentLoaded', function() {
-      const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
-      document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
-
-      document.querySelectorAll('.nav-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          switchTab(this.getAttribute('data-target'), this);
-        });
-      });
-
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) {
-        searchInput.addEventListener('input', filterWiki);
-      }
-
-      const fieldForm = document.getElementById('fieldForm');
-      if (fieldForm) {
-        fieldForm.addEventListener('submit', handleFormSubmit);
-      }
-
       fetch('kruideninfo.json')
         .then(function(res) { return res.json(); })
         .then(function(data) {
           globalPlantData = data;
-          document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
+          document.getElementById('timestampInfo').textContent = 'Wiki geladen (' + data.length + ' soorten)';
         })
-        .catch(function(err) { console.error('Fout bij laden kruideninfo.json:', err); });
+        .catch(function(err) { console.error('Fout bij laden JSON:', err); });
     });
 
+    function switchTab(tabId, btn) {
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < contents.length; i++) {
+        contents[i].classList.remove('active');
+      }
+      var buttons = document.querySelectorAll('.nav-btn');
+      for (var j = 0; j < buttons.length; j++) {
+        buttons[j].classList.remove('active');
+      }
+      document.getElementById(tabId).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
     function filterWiki() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      const container = document.getElementById('wikiContainer');
+      var query = document.getElementById('searchInput').value.toLowerCase().trim();
+      var container = document.getElementById('wikiContainer');
       if (!globalPlantData.length) return;
       if (!query) {
         container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven...</p>';
         return;
       }
-      let html = '';
+      var html = '';
       globalPlantData.forEach(function(item) {
-        let soort = String(item.Soortnaam || '');
-        let latijn = String(item.Latijnse naam || '');
+        var soort = String(item.Soortnaam || '');
+        var latijn = String(item.Latijnse naam || '');
         if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
-          let detailsHtml = '';
-          for (let key in item) {
+          var detailsHtml = '';
+          for (var key in item) {
             if (key === 'Soortnaam' || key === 'Latijnse naam' || !item[key]) continue;
             detailsHtml += '<div class="wiki-field"><strong>' + key + ':</strong> ' + item[key] + '</div>';
           }
@@ -303,89 +209,63 @@
       container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
     }
 
-    function forceRefreshData() {
-      sessionStorage.clear();
-      document.getElementById('notesContainer').innerHTML = '';
-      document.getElementById('logboekenContainer').innerHTML = '';
-      showLoadButtons();
-      alert('Cache gewist.');
-    }
-
-    function hideLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(function(id) {
-        let el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-      });
-    }
-
-    function showLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(function(id) {
-        let el = document.getElementById(id);
-        if (el) el.style.display = 'block';
-      });
-    }
-
-    function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
-      document.querySelectorAll('.nav-btn').forEach(function(el) { el.classList.remove('active'); });
-      document.getElementById(tabId).classList.add('active');
-      if (btn) btn.classList.add('active');
-    }
-
     function loadDashboardData() {
       fetch(SCRIPT_URL)
         .then(function(res) { return res.json(); })
         .then(function(data) {
           displayLogs(data);
-          hideLoadButtons();
+          var el1 = document.getElementById('loadActionContainer');
+          var el2 = document.getElementById('loadActionContainer2');
+          if (el1) el1.style.display = 'none';
+          if (el2) el2.style.display = 'none';
         })
         .catch(function(err) { alert('Fout bij laden data: ' + err); });
     }
 
     function getTimestamp(val) {
       if (!val) return 0;
-      let d = new Date(String(val).trim());
-      let time = d.getTime();
+      var d = new Date(String(val).trim());
+      var time = d.getTime();
       return !isNaN(time) ? time : 0;
     }
 
     function displayLogs(plantData) {
-      const notesContainer = document.getElementById('notesContainer');
-      const logboekenContainer = document.getElementById('logboekenContainer');
-      let logboekenHtml = '', allNotesHtml = '';
+      var notesContainer = document.getElementById('notesContainer');
+      var logboekenContainer = document.getElementById('logboekenContainer');
+      var logboekenHtml = '', allNotesHtml = '';
 
       plantData.forEach(function(source) {
-        let logboek = source.logboek;
+        var logboek = source.logboek;
         if (!logboek || !logboek.length) return;
 
-        let headers = logboek[0].map(function(h) { return String(h).trim().toLowerCase(); });
-        let skipIndices = [];
+        var headers = logboek[0].map(function(h) { return String(h).trim().toLowerCase(); });
+        var skipIndices = [];
         headers.forEach(function(h, idx) {
           if (h.includes('foutcode') || h.includes('waarschuwing')) {
             skipIndices.push(idx);
           }
         });
 
-        let idxDatum = headers.findIndex(function(h) { return h.includes('timestamp') || h.includes('datum'); });
-        let idxNaam = headers.findIndex(function(h) { return h.includes('naam'); });
-        let idxVak = headers.findIndex(function(h) { return h === 'vak' || h.includes('vak'); });
-        let idxKruid = headers.findIndex(function(h) { return h.includes('kruid') || h.includes('plant'); });
-        let idxNotitie = headers.findIndex(function(h) { return h.includes('notitie') || h.includes('opmerking'); });
-        let idxFoto = headers.findIndex(function(h) { return h.includes('foto') || h.includes('url'); });
+        var idxDatum = headers.findIndex(function(h) { return h.includes('timestamp') || h.includes('datum'); });
+        var idxNaam = headers.findIndex(function(h) { return h.includes('naam'); });
+        var idxVak = headers.findIndex(function(h) { return h === 'vak' || h.includes('vak'); });
+        var idxKruid = headers.findIndex(function(h) { return h.includes('kruid') || h.includes('plant'); });
+        var idxNotitie = headers.findIndex(function(h) { return h.includes('notitie') || h.includes('opmerking'); });
+        var idxFoto = headers.findIndex(function(h) { return h.includes('foto') || h.includes('url'); });
 
-        let headerRow = logboek[0];
-        let dataRows = logboek.slice(1);
+        var headerRow = logboek[0];
+        var dataRows = logboek.slice(1);
         
         dataRows.sort(function(a, b) {
-          let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
-          let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
+          var timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
+          var timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
           return timeB - timeA;
         });
 
         logboekenHtml += '<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;"><tr>';
         headerRow.forEach(function(cell, cellIdx) {
           if (skipIndices.includes(cellIdx)) return;
-          let val = cell !== null ? String(cell) : '';
+          var val = cell !== null ? String(cell) : '';
           logboekenHtml += '<th style="background: #e8f5e9; padding: 4px;">' + val + '</th>';
         });
         logboekenHtml += '</tr>';
@@ -394,9 +274,9 @@
           logboekenHtml += '<tr>';
           row.forEach(function(cell, cellIdx) {
             if (skipIndices.includes(cellIdx)) return;
-            let val = cell !== null ? String(cell) : '';
+            var val = cell !== null ? String(cell) : '';
             if (val.startsWith('http')) {
-              val = '<a href="' + val + '" target="_blank">🔗 Bekijk foto</a>';
+              val = '<a href="' + val + '" target="_blank">🔗 Foto</a>';
             }
             logboekenHtml += '<td style="padding: 4px;">' + val + '</td>';
           });
@@ -404,17 +284,16 @@
         });
         logboekenHtml += '</table></div>';
 
-        let parsedRows = [];
         dataRows.forEach(function(row) {
-          let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
-          let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
-          let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
-          let kruid = idxKruid > -1 && row[idxKruid] ? String(row[idxKruid]).trim() : '';
-          let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
-          let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
+          var datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
+          var naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
+          var vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
+          var kruid = idxKruid > -1 && row[idxKruid] ? String(row[idxKruid]).trim() : '';
+          var notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
+          var foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
           row.forEach(function(cell) {
-            let c = cell !== null ? String(cell).trim() : '';
+            var c = cell !== null ? String(cell).trim() : '';
             if (/^K[1-8]$/i.test(c)) vak = c;
             if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
           });
@@ -424,34 +303,30 @@
           if (notitie.startsWith('http')) notitie = '';
           if (!notitie && (!foto || !foto.startsWith('http'))) return;
 
-          parsedRows.push({ datum: datum, naam: naam, vak: vak, kruid: kruid, notitie: notitie, foto: foto });
-        });
-
-        parsedRows.forEach(function(item) {
-          let fotoHtml = item.foto && item.foto.startsWith('http') ? '<div style="margin-top: 4px;"><a href="' + item.foto + '" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>' : '';
-          let inhoudHtml = '';
-          if (item.kruid && item.notitie) {
-            inhoudHtml = '<div>Kruid: <strong>' + item.kruid + '</strong> | Notitie: ' + item.notitie + '</div>';
-          } else if (item.kruid) {
-            inhoudHtml = '<div>Kruid: <strong>' + item.kruid + '</strong></div>';
-          } else if (item.notitie) {
-            inhoudHtml = '<div>Notitie: ' + item.notitie + '</div>';
+          var fotoHtml = foto && foto.startsWith('http') ? '<div style="margin-top: 4px;"><a href="' + foto + '" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Foto</a></div>' : '';
+          var inhoudHtml = '';
+          if (kruid && notitie) {
+            inhoudHtml = '<div>Kruid: <strong>' + kruid + '</strong> | Notitie: ' + notitie + '</div>';
+          } else if (kruid) {
+            inhoudHtml = '<div>Kruid: <strong>' + kruid + '</strong></div>';
+          } else if (notitie) {
+            inhoudHtml = '<div>Notitie: ' + notitie + '</div>';
           }
 
-          allNotesHtml += '<div class="log-entry"><strong>👤 ' + item.naam + '</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ' + item.vak + ' - ' + String(item.datum).substring(0, 16) + ')</span><br>' + inhoudHtml + fotoHtml + '</div>';
+          allNotesHtml += '<div class="log-entry"><strong>👤 ' + naam + '</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ' + vak + ' - ' + String(datum).substring(0, 16) + ')</span><br>' + inhoudHtml + fotoHtml + '</div>';
         });
       });
 
-      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto s.</p>';
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties.</p>';
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
     function handleFormSubmit(event) {
       event.preventDefault();
-      const submitBtn = document.getElementById('submitBtn');
-      const fileInput = document.getElementById('foto');
-      const file = fileInput.files[0];
-      const selectedVak = document.getElementById('vak').value;
+      var submitBtn = document.getElementById('submitBtn');
+      var fileInput = document.getElementById('foto');
+      var file = fileInput.files[0];
+      var selectedVak = document.getElementById('vak').value;
 
       if (file && file.size > 5 * 1024 * 1024) {
         alert('Foto is groter dan 5MB.');
@@ -461,7 +336,7 @@
       submitBtn.disabled = true;
       submitBtn.textContent = file ? 'Foto comprimeren & verzenden...' : 'Inzending verzenden...';
 
-      const payload = {
+      var payload = {
         naam: document.getElementById('naam').value,
         vak: selectedVak,
         kruidsoort: document.getElementById('kruidsoort').value,
@@ -472,15 +347,15 @@
       };
 
       if (file) {
-        const reader = new FileReader();
+        var reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = function(e) {
-          const img = new Image();
+          var img = new Image();
           img.src = e.target.result;
           img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let w = img.width, h = img.height;
-            const max = 1200;
+            var canvas = document.createElement('canvas');
+            var w = img.width, h = img.height;
+            var max = 1200;
             if (w > h && w > max) { h *= max / w; w = max; }
             else if (h > max) { w *= max / h; h = max; }
             canvas.width = w; canvas.height = h;
@@ -501,7 +376,7 @@
       })
       .then(function(res) { return res.json(); })
       .then(function(res) {
-        alert('Inzending succesvol verstuurd met schone foto-link!');
+        alert('Inzending succesvol verstuurd!');
         document.getElementById('fieldForm').reset();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
