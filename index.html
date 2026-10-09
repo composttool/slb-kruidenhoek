@@ -1,10 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1500
+   Versie: 09-10-2026-1510
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en opgeschoonde tabellen zonder 
-                foutcodes of waarschuwingen.
+                dynamische header-herkenning, en correct gesorteerde opmerkingen 
+                (nieuwste bovenaan).
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -264,7 +264,7 @@
       const fieldForm = document.getElementById('fieldForm');
       if (fieldForm) fieldForm.addEventListener('submit', handleFormSubmit);
 
-      // Laad kruideninfo.json voor wiki[cite: 1]
+      // Laad kruideninfo.json voor wiki
       fetch('kruideninfo.json')
         .then(response => response.json())
         .then(data => {
@@ -343,11 +343,11 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZONDER FOUTCODE / WAARSCHUWING) ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (GESORTEERD: NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
-      let allNotesHtml = '', logboekenHtml = '';
+      let logboekenHtml = '';
 
       plantData.forEach(source => {
         let logboek = source.logboek;
@@ -355,7 +355,6 @@
 
         let headers = logboek[0].map(h => String(h).trim().toLowerCase());
         
-        // Bepaal welke kolommen we willen uitsluiten (foutcode, waarschuwing)
         let skipIndices = [];
         headers.forEach((h, idx) => {
           if (h.includes('foutcode') || h.includes('waarschuwing')) {
@@ -370,12 +369,12 @@
         let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
         let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
 
-        // Bouw de ruwe tabel op, maar sla de 'skipIndices' kolommen over
+        // Bouw ruwe tabel
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         logboek.forEach((row, index) => {
           logboekenHtml += `<tr>`;
           row.forEach((cell, cellIdx) => {
-            if (skipIndices.includes(cellIdx)) return; // Sla foutcode en waarschuwing over
+            if (skipIndices.includes(cellIdx)) return;
             let val = cell !== null ? String(cell) : '';
             if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
             logboekenHtml += index === 0 ? `<th style="background: #e8f5e9; padding: 4px;">${val}</th>` : `<td style="padding: 4px;">${val}</td>`;
@@ -384,7 +383,9 @@
         });
         logboekenHtml += `</table></div>`;
 
-        for (let i = logboek.length - 1; i >= 1; i--) {
+        // Verzamel alle geldige rijen in een array zodat we ze expliciet kunnen sorteren op datum (nieuwste eerst)
+        let parsedRows = [];
+        for (let i = 1; i < logboek.length; i++) {
           let row = logboek[i];
           
           let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
@@ -408,30 +409,40 @@
           }
 
           if (!notitie && (!foto || !foto.startsWith('http'))) {
-            continue;
+            continue; // Sla lege regels over
           }
 
-          let fotoHtml = foto && foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
+        }
+
+        // Sorteer array: nieuwste datum/tijd bovenaan (aflopend)
+        parsedRows.sort((a, b) => new Date(b.datum) - new Date(a.datum));
+
+        // Genereer de HTML voor de opmerkingen-kaarten op basis van de gesorteerde lijst
+        let allNotesHtml = '';
+        parsedRows.forEach(item => {
+          let fotoHtml = item.foto && item.foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${item.foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
           
           let inhoudHtml = '';
-          if (kruid && notitie) {
-            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong> | Notitie: ${notitie}</div>`;
-          } else if (kruid) {
-            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong></div>`;
-          } else if (notitie) {
-            inhoudHtml = `<div>Notitie: ${notitie}</div>`;
+          if (item.kruid && item.notitie) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong> | Notitie: ${item.notitie}</div>`;
+          } else if (item.kruid) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong></div>`;
+          } else if (item.notitie) {
+            inhoudHtml = `<div>Notitie: ${item.notitie}</div>`;
           }
 
           allNotesHtml += `
             <div class="log-entry">
-              <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(datum).substring(0, 16)})</span><br>
+              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${item.vak} - ${String(item.datum).substring(0, 16)})</span><br>
               ${inhoudHtml}
               ${fotoHtml}
             </div>`;
-        }
+        });
+
+        notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
       });
 
-      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
