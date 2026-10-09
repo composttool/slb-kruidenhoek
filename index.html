@@ -1,9 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 9-10-2026-1049
+   Versie: 9-10-2026-1430
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
-                compressie, en veilige doorgifte naar Google Apps Script voor 
-                automatische GitHub opslag in vak-mappen (K1 t/m K8).
+                compressie, veilige doorgifte naar Google Apps Script, 
+                en schone weergave van opmerkingen & foto-knoppen.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -366,20 +366,44 @@
 
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
-          let datum = row[0] || '', naam = row[1] || 'Onbekend', vak = row[2] || '', kruid = row[3] || '', notitie = row[6] || '', foto = row[7] || '';
-          
-          let fotoHtml = foto && foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          let datum = row[0] || '';
+          let naam = row[2] || row[1] || 'Onbekend';
+          let kruid = row[3] || '';
+          let vak = row[6] || row[7] || '';
+          let notitie = row[4] || row[7] || '';
+          let foto = '';
+
+          // Zoek in de hele rij naar een geldige foto-URL
+          row.forEach(cell => {
+            let cellStr = cell !== null ? String(cell).trim() : '';
+            if (cellStr.startsWith('http://') || cellStr.startsWith('https://')) {
+              foto = cellStr;
+            }
+          });
+
+          // Als de notitie zelf de foto-URL is, maken we de notitie leeg
+          if (notitie.startsWith('http')) {
+            notitie = '';
+          }
+
+          // Sla rijen over die zowel geen notitie als geen foto hebben
+          if (!notitie && !foto) {
+            continue;
+          }
+
+          let fotoHtml = foto ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          let notitieHtml = notitie ? `<div>Kruid: ${kruid} | Notitie: ${notitie}</div>` : `<div>Kruid: ${kruid}</div>`;
 
           allNotesHtml += `
             <div class="log-entry">
               <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(datum).substring(0, 16)})</span><br>
-              <div>Kruid: ${kruid} | Notitie: ${notitie}</div>
+              ${notitieHtml}
               ${fotoHtml}
             </div>`;
         }
       });
 
-      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen.</p>';
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
