@@ -1,10 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1512
+   Versie: 09-10-2026-1515
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en zowel de opmerkingen-kaarten 
-                als de ruwe tabel gesorteerd met de nieuwste inzending bovenaan.
+                dynamische header-herkenning, en perfecte datumsortering 
+                (nieuwste altijd bovenaan).
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -343,7 +343,15 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZOWEL TABEL ALS KAARTEN GESORTEERD: NIEUWSTE BOVEN) ---
+    // --- HULPFUNCTIE: DATUM PARSEN VOOR CORRECTE SORTERING ---
+    function parseDateValue(val) {
+      if (!val) return 0;
+      let d = new Date(val);
+      if (!isNaN(d.getTime())) return d.getTime();
+      return 0;
+    }
+
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (STRIKTE DATUM-SORTERING: NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -369,19 +377,18 @@
         let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
         let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
 
-        // Sorteer logboek rijen (exclusief header) op datum (nieuwste eerst) voor de tabel
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
         
+        // Sorteer dataRows op basis van de echte datum-tijdswaarde (nieuwste bovenaan)
         dataRows.sort((a, b) => {
-          let dA = idxDatum > -1 ? new Date(a[idxDatum]) : new Date(a[0]);
-          let dB = idxDatum > -1 ? new Date(b[idxDatum]) : new Date(b[0]);
-          return dB - dA; // Aflopend: nieuwste bovenaan
+          let timeA = idxDatum > -1 ? parseDateValue(a[idxDatum]) : parseDateValue(a[0]);
+          let timeB = idxDatum > -1 ? parseDateValue(b[idxDatum]) : parseDateValue(b[0]);
+          return timeB - timeA; // Aflopend: hoogste timestamp (nieuwste) eerst
         });
 
-        // Bouw ruwe tabel met gesorteerde rijen
+        // Bouw ruwe tabel met correct gesorteerde rijen
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
-        // Header rij
         logboekenHtml += `<tr>`;
         headerRow.forEach((cell, cellIdx) => {
           if (skipIndices.includes(cellIdx)) return;
@@ -390,7 +397,6 @@
         });
         logboekenHtml += `</tr>`;
 
-        // Data rijen
         dataRows.forEach(row => {
           logboekenHtml += `<tr>`;
           row.forEach((cell, cellIdx) => {
@@ -427,10 +433,10 @@
           }
 
           if (!notitie && (!foto || !foto.startsWith('http'))) {
-            return; // Sla lege regels over
+            return;
           }
 
-          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
+          parsedRows.push({ datum, naam, vak, kruid, notitie, foto, timeVal: parseDateValue(datum) });
         });
 
         // Genereer de HTML voor de opmerkingen-kaarten
