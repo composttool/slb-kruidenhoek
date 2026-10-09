@@ -1,9 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 9-10-2026-1430
+   Versie: 9-10-2026-1445
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                en schone weergave van opmerkingen & foto-knoppen.
+                en dynamische header-herkenning voor logboeken & foto-knoppen.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -342,7 +342,7 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (MET DYNAMISCHE HEADERS) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -351,6 +351,15 @@
       plantData.forEach(source => {
         let logboek = source.logboek;
         if (!logboek || !logboek.length) return;
+
+        // Dynamische kolomindexering op basis van kopteksten
+        let headers = logboek[0].map(h => String(h).trim().toLowerCase());
+        let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
+        let idxNaam = headers.findIndex(h => h.includes('naam'));
+        let idxVak = headers.findIndex(h => h === 'vak' || h.includes('vak'));
+        let idxKruid = headers.findIndex(h => h.includes('kruid') || h.includes('plant'));
+        let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
+        let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
 
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         logboek.forEach((row, index) => {
@@ -366,38 +375,51 @@
 
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
-          let datum = row[0] || '';
-          let naam = row[2] || row[1] || 'Onbekend';
-          let kruid = row[3] || '';
-          let vak = row[6] || row[7] || '';
-          let notitie = row[4] || row[7] || '';
-          let foto = '';
+          
+          let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
+          let naam = idxNaam > -1 && row[idxNaam] ? row[idxNaam] : 'Onbekend';
+          let vak = idxVak > -1 && row[idxVak] ? row[idxVak] : '-';
+          let kruid = idxKruid > -1 && row[idxKruid] ? row[idxKruid] : '';
+          let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
+          let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
-          // Zoek in de hele rij naar een geldige foto-URL
-          row.forEach(cell => {
-            let cellStr = cell !== null ? String(cell).trim() : '';
-            if (cellStr.startsWith('http://') || cellStr.startsWith('https://')) {
-              foto = cellStr;
-            }
-          });
+          if (String(naam).startsWith('http')) naam = 'Onbekend';
+          if (String(vak).startsWith('http')) vak = '-';
 
-          // Als de notitie zelf de foto-URL is, maken we de notitie leeg
+          // Zoek in de hele rij naar een geldige foto-URL als deze ontbreekt
+          if (!foto || !foto.startsWith('http')) {
+            row.forEach(cell => {
+              let cellStr = cell !== null ? String(cell).trim() : '';
+              if (cellStr.startsWith('http://') || cellStr.startsWith('https://')) {
+                foto = cellStr;
+              }
+            });
+          }
+
           if (notitie.startsWith('http')) {
             notitie = '';
           }
 
-          // Sla rijen over die zowel geen notitie als geen foto hebben
-          if (!notitie && !foto) {
+          // Filter lege regels (zonder opmerking en zonder foto)
+          if (!notitie && (!foto || !foto.startsWith('http'))) {
             continue;
           }
 
-          let fotoHtml = foto ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
-          let notitieHtml = notitie ? `<div>Kruid: ${kruid} | Notitie: ${notitie}</div>` : `<div>Kruid: ${kruid}</div>`;
+          let fotoHtml = foto && foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          
+          let inhoudHtml = '';
+          if (kruid && notitie) {
+            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong> | Notitie: ${notitie}</div>`;
+          } else if (kruid) {
+            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong></div>`;
+          } else if (notitie) {
+            inhoudHtml = `<div>Notitie: ${notitie}</div>`;
+          }
 
           allNotesHtml += `
             <div class="log-entry">
               <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(datum).substring(0, 16)})</span><br>
-              ${notitieHtml}
+              ${inhoudHtml}
               ${fotoHtml}
             </div>`;
         }
