@@ -1,7 +1,7 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1800
-   Omschrijving: Volledige stabiele versie met gegarandeerd correcte syntax.
+   Versie: 09-10-2026-1830
+   Omschrijving: Volledige stabiele versie met correcte functie-scopes.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -47,126 +47,11 @@
     .wiki-field strong { color: #2e7d32; }
     .log-entry { background: var(--primary-light); border-left: 4px solid var(--primary); padding: 10px; margin-bottom: 8px; border-radius: 0 6px 6px 0; font-size: 0.85rem; word-break: break-word; }
   </style>
-</head>
-<body>
-
-  <div class="container">
-    <header>
-      <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard</p>
-      <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
-    </header>
-
-    <div class="nav-tabs">
-      <button class="nav-btn active" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
-      <button class="nav-btn" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
-      <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
-      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Alle Reacties</button>
-    </div>
-
-    <!-- Tab 1: Wiki -->
-    <div id="wiki" class="tab-content active">
-      <div class="card">
-        <h2>🔍 Planten Wiki Database</h2>
-        <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Basilicum, Bieslook)..." oninput="filterWiki()">
-        </div>
-        <div id="wikiContainer">
-          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de database te doorzoeken.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab 2: Opmerkingen -->
-    <div id="opmerkingen" class="tab-content">
-      <div class="card">
-        <h2>💡 Recente Acties & Veldnotities</h2>
-        <div id="loadActionContainer">
-          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
-        </div>
-        <div id="notesContainer"></div>
-      </div>
-    </div>
-
-    <!-- Tab 3: Veldinvoer -->
-    <div id="veldinvoer" class="tab-content">
-      <div class="card">
-        <h2>📝 Veldinvoer Formulier</h2>
-        <form id="fieldForm" onsubmit="handleFormSubmit(event)">
-          <div class="form-group">
-            <label for="naam">Je Naam:</label>
-            <input type="text" id="naam" required placeholder="Bijv. Jan">
-          </div>
-          <div class="form-group">
-            <label for="vak">Vak:</label>
-            <select id="vak" required>
-              <option value="">Selecteer een vak...</option>
-              <option value="K1">K1</option>
-              <option value="K2">K2</option>
-              <option value="K3">K3</option>
-              <option value="K4">K4</option>
-              <option value="K5">K5</option>
-              <option value="K6">K6</option>
-              <option value="K7">K7</option>
-              <option value="K8">K8</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="kruidsoort">Kruidensoort:</label>
-            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn">
-          </div>
-          <div class="form-group">
-            <label for="actie">Type Actie:</label>
-            <select id="actie">
-              <option value="Snoei / Onderhoud">Snoei / Onderhoud</option>
-              <option value="Oogst">Oogst</option>
-              <option value="Water geven">Water geven</option>
-              <option value="Monitoring">Monitoring / Waarneming</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="ziekte">Ziekte of waarneming:</label>
-            <input type="text" id="ziekte" placeholder="Bijv. Geen">
-          </div>
-          <div class="form-group">
-            <label for="notities">Notities:</label>
-            <textarea id="notities" placeholder="Typ hier opmerkingen..."></textarea>
-          </div>
-          <div class="form-group">
-            <label for="foto">Foto (optioneel):</label>
-            <input type="file" id="foto" accept="image/*">
-          </div>
-          <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Tab 4: Logboeken -->
-    <div id="logboeken" class="tab-content">
-      <div class="card">
-        <h2>📁 Ruwe Formulier Reacties</h2>
-        <div id="loadActionContainer2">
-          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Alle Reacties</button>
-        </div>
-        <div id="logboekenContainer"></div>
-      </div>
-    </div>
-
-  </div>
 
   <script>
+    // --- GLOBALE FUNCTIES (ZODRAA DE PAGINA LAADT DIRECT BESCHIKBAAR) ---
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
     let globalPlantData = [];
-
-    window.addEventListener('DOMContentLoaded', function() {
-      fetch('kruideninfo.json')
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          globalPlantData = data;
-          document.getElementById('timestampInfo').textContent = 'Wiki geladen (' + data.length + ' soorten)';
-        })
-        .catch(function(err) { console.error('Fout bij laden JSON:', err); });
-    });
 
     function switchTab(tabId, btn) {
       var contents = document.querySelectorAll('.tab-content');
@@ -177,7 +62,8 @@
       for (var j = 0; j < buttons.length; j++) {
         buttons[j].classList.remove('active');
       }
-      document.getElementById(tabId).classList.add('active');
+      var targetTab = document.getElementById(tabId);
+      if (targetTab) targetTab.classList.add('active');
       if (btn) btn.classList.add('active');
     }
 
@@ -388,6 +274,124 @@
         submitBtn.textContent = 'Inzending Versturen';
       });
     }
+
+    // Laad JSON direct bij het laden van de DOM
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('kruideninfo.json')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          globalPlantData = data;
+          var info = document.getElementById('timestampInfo');
+          if (info) info.textContent = 'Wiki geladen (' + data.length + ' soorten)';
+        })
+        .catch(function(err) { console.error('Fout bij laden JSON:', err); });
+    });
   </script>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Stadslandbouw Arnhem</h1>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard</p>
+      <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
+    </header>
+
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('wiki', this)">🔍 Wiki & Zoeken</button>
+      <button class="nav-btn" onclick="switchTab('opmerkingen', this)">💡 Opmerkingen</button>
+      <button class="nav-btn" onclick="switchTab('veldinvoer', this)">📝 Veldinvoer</button>
+      <button class="nav-btn" onclick="switchTab('logboeken', this)">📁 Alle Reacties</button>
+    </div>
+
+    <!-- Tab 1: Wiki -->
+    <div id="wiki" class="tab-content active">
+      <div class="card">
+        <h2>🔍 Planten Wiki Database</h2>
+        <div class="form-group">
+          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Basilicum, Bieslook)..." oninput="filterWiki()">
+        </div>
+        <div id="wikiContainer">
+          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de database te doorzoeken.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Opmerkingen -->
+    <div id="opmerkingen" class="tab-content">
+      <div class="card">
+        <h2>💡 Recente Acties & Veldnotities</h2>
+        <div id="loadActionContainer">
+          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
+        </div>
+        <div id="notesContainer"></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Veldinvoer -->
+    <div id="veldinvoer" class="tab-content">
+      <div class="card">
+        <h2>📝 Veldinvoer Formulier</h2>
+        <form id="fieldForm" onsubmit="handleFormSubmit(event)">
+          <div class="form-group">
+            <label for="naam">Je Naam:</label>
+            <input type="text" id="naam" required placeholder="Bijv. Jan">
+          </div>
+          <div class="form-group">
+            <label for="vak">Vak:</label>
+            <select id="vak" required>
+              <option value="">Selecteer een vak...</option>
+              <option value="K1">K1</option>
+              <option value="K2">K2</option>
+              <option value="K3">K3</option>
+              <option value="K4">K4</option>
+              <option value="K5">K5</option>
+              <option value="K6">K6</option>
+              <option value="K7">K7</option>
+              <option value="K8">K8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="kruidsoort">Kruidensoort:</label>
+            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn">
+          </div>
+          <div class="form-group">
+            <label for="actie">Type Actie:</label>
+            <select id="actie">
+              <option value="Snoei / Onderhoud">Snoei / Onderhoud</option>
+              <option value="Oogst">Oogst</option>
+              <option value="Water geven">Water geven</option>
+              <option value="Monitoring">Monitoring / Waarneming</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ziekte">Ziekte of waarneming:</label>
+            <input type="text" id="ziekte" placeholder="Bijv. Geen">
+          </div>
+          <div class="form-group">
+            <label for="notities">Notities:</label>
+            <textarea id="notities" placeholder="Typ hier opmerkingen..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="foto">Foto (optioneel):</label>
+            <input type="file" id="foto" accept="image/*">
+          </div>
+          <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tab 4: Logboeken -->
+    <div id="logboeken" class="tab-content">
+      <div class="card">
+        <h2>📁 Ruwe Formulier Reacties</h2>
+        <div id="loadActionContainer2">
+          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Alle Reacties</button>
+        </div>
+        <div id="logboekenContainer"></div>
+      </div>
+    </div>
+
+  </div>
 </body>
 </html>
