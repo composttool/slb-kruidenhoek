@@ -1,10 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1525
+   Versie: 09-10-2026-1530
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en waterdichte ISO-stringsortering 
-                (nieuwste altijd bovenaan).
+                dynamische header-herkenning, en zuivere timestamp-sortering 
+                (oktober netjes boven september, nieuwste altijd bovenaan).
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -343,7 +343,15 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (WATERDICHTE ISO-STRING SORTERING: NIEUWSTE BOVEN) ---
+    // --- HULPFUNCTIE: ZUIVERE TIMESTAMP CONVERSIE ---
+    function getTimestamp(val) {
+      if (!val) return 0;
+      let d = new Date(String(val).trim());
+      let time = d.getTime();
+      return !isNaN(time) ? time : 0;
+    }
+
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZUIVERE TIMESTAMP-SORTERING: NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -372,11 +380,11 @@
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
         
-        // Sorteer dataRows aflopend op basis van de datumstring (nieuwste ISO datum bovenaan)
+        // Sorteer dataRows aflopend op basis van exacte tijdswaarde in milliseconden (nieuwste timestamp bovenaan)
         dataRows.sort((a, b) => {
-          let strA = idxDatum > -1 ? String(a[idxDatum] || '') : String(a[0] || '');
-          let strB = idxDatum > -1 ? String(b[idxDatum] || '') : String(b[0] || '');
-          return strB.localeCompare(strA); // Van Z naar A = nieuwste datum eerst
+          let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
+          let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
+          return timeB - timeA; // Hoogste timestamp (meest recent) eerst
         });
 
         // Bouw ruwe tabel met correct gesorteerde rijen
