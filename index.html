@@ -1,9 +1,8 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1720
-   Omschrijving: Volledige frontend inclusief mobiel-geoptimaliseerde dynamische 
-                Wiki-weergave voor alle kolommen uit kruideninfo.json, lokale 
-                canvas compressie, en waterdichte timestamp-sortering.
+   Versie: 09-10-2026-1730
+   Omschrijving: Volledige frontend inclusief mobiel-geoptimaliseerde wiki,
+                foutloze syntax, canvas compressie en timestamp-sortering.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -244,38 +243,38 @@
   </div>
 
   <script>
-    // --- CONFIGURATIE ---
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
     let globalPlantData = [];
 
-    // --- INITIALISATIE & EVENT LISTENERS ---
     window.addEventListener('DOMContentLoaded', function() {
       const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
       document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
 
-      document.querySelectorAll('.nav-btn').forEach(btn => {
+      document.querySelectorAll('.nav-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           switchTab(this.getAttribute('data-target'), this);
         });
       });
 
       const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.addEventListener('input', filterWiki);
+      if (searchInput) {
+        searchInput.addEventListener('input', filterWiki);
+      }
 
       const fieldForm = document.getElementById('fieldForm');
-      if (fieldForm) fieldForm.addEventListener('submit', handleFormSubmit);
+      if (fieldForm) {
+        fieldForm.addEventListener('submit', handleFormSubmit);
+      }
 
-      // Laad kruideninfo.json voor wiki
       fetch('kruideninfo.json')
-        .then(response => response.json())
-        .then(data => {
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
           globalPlantData = data;
           document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
         })
-        .catch(err => console.error('Fout bij laden kruideninfo.json:', err));
+        .catch(function(err) { console.error('Fout bij laden kruideninfo.json:', err); });
     });
 
-    // --- FUNCTIE: WIKI & DYNAMISCH MOBIEL-VRIENDELIJK ZOEKFILTER ---
     function filterWiki() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const container = document.getElementById('wikiContainer');
@@ -285,34 +284,25 @@
         return;
       }
       let html = '';
-      globalPlantData.forEach(item => {
+      globalPlantData.forEach(function(item) {
         let soort = String(item.Soortnaam || '');
         let latijn = String(item.Latijnse naam || '');
         if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
-          
           let detailsHtml = '';
           for (let key in item) {
             if (key === 'Soortnaam' || key === 'Latijnse naam' || !item[key]) continue;
-            detailsHtml += `
-              <div class="wiki-field">
-                <strong>${key}:</strong> ${item[key]}
-              </div>`;
+            detailsHtml += '<div class="wiki-field"><strong>' + key + ':</strong> ' + item[key] + '</div>';
           }
-
-          html += `
-            <div class="plant-card">
-              <div class="plant-title">🌿 ${soort}</div>
-              ${latijn ? `<div class="plant-subtitle">${latijn}</div>` : ''}
-              <div class="plant-info-grid">
-                ${detailsHtml}
-              </div>
-            </div>`;
+          html += '<div class="plant-card"><div class="plant-title">🌿 ' + soort + '</div>';
+          if (latijn) {
+            html += '<div class="plant-subtitle">' + latijn + '</div>';
+          }
+          html += '<div class="plant-info-grid">' + detailsHtml + '</div></div>';
         }
       });
       container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
     }
 
-    // --- FUNCTIE: CACHE & NAVIGATIE BEHEER ---
     function forceRefreshData() {
       sessionStorage.clear();
       document.getElementById('notesContainer').innerHTML = '';
@@ -322,38 +312,36 @@
     }
 
     function hideLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+      ['loadActionContainer', 'loadActionContainer2'].forEach(function(id) {
         let el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
     }
 
     function showLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+      ['loadActionContainer', 'loadActionContainer2'].forEach(function(id) {
         let el = document.getElementById(id);
         if (el) el.style.display = 'block';
       });
     }
 
     function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.nav-btn').forEach(function(el) { el.classList.remove('active'); });
       document.getElementById(tabId).classList.add('active');
       if (btn) btn.classList.add('active');
     }
 
-    // --- FUNCTIE: DATA LADEN UIT GOOGLE SHEETS ---
     function loadDashboardData() {
       fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
           displayLogs(data);
           hideLoadButtons();
         })
-        .catch(err => alert('Fout bij laden data: ' + err));
+        .catch(function(err) { alert('Fout bij laden data: ' + err); });
     }
 
-    // --- HULPFUNCTIE: ZUIVERE TIMESTAMP CONVERSIE ---
     function getTimestamp(val) {
       if (!val) return 0;
       let d = new Date(String(val).trim());
@@ -361,64 +349,63 @@
       return !isNaN(time) ? time : 0;
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZUIVERE TIMESTAMP-SORTERING: NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
       let logboekenHtml = '', allNotesHtml = '';
 
-      plantData.forEach(source => {
+      plantData.forEach(function(source) {
         let logboek = source.logboek;
         if (!logboek || !logboek.length) return;
 
-        let headers = logboek[0].map(h => String(h).trim().toLowerCase());
-        
+        let headers = logboek[0].map(function(h) { return String(h).trim().toLowerCase(); });
         let skipIndices = [];
-        headers.forEach((h, idx) => {
+        headers.forEach(function(h, idx) {
           if (h.includes('foutcode') || h.includes('waarschuwing')) {
             skipIndices.push(idx);
           }
         });
 
-        let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
-        let idxNaam = headers.findIndex(h => h.includes('naam'));
-        let idxVak = headers.findIndex(h => h === 'vak' || h.includes('vak'));
-        let idxKruid = headers.findIndex(h => h.includes('kruid') || h.includes('plant'));
-        let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
-        let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
+        let idxDatum = headers.findIndex(function(h) { return h.includes('timestamp') || h.includes('datum'); });
+        let idxNaam = headers.findIndex(function(h) { return h.includes('naam'); });
+        let idxVak = headers.findIndex(function(h) { return h === 'vak' || h.includes('vak'); });
+        let idxKruid = headers.findIndex(function(h) { return h.includes('kruid') || h.includes('plant'); });
+        let idxNotitie = headers.findIndex(function(h) { return h.includes('notitie') || h.includes('opmerking'); });
+        let idxFoto = headers.findIndex(function(h) { return h.includes('foto') || h.includes('url'); });
 
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
         
-        dataRows.sort((a, b) => {
+        dataRows.sort(function(a, b) {
           let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
           let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
           return timeB - timeA;
         });
 
-        logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
-        logboekenHtml += `<tr>`;
-        headerRow.forEach((cell, cellIdx) => {
+        logboekenHtml += '<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;"><tr>';
+        headerRow.forEach(function(cell, cellIdx) {
           if (skipIndices.includes(cellIdx)) return;
           let val = cell !== null ? String(cell) : '';
-          logboekenHtml += `<th style="background: #e8f5e9; padding: 4px;">${val}</th>`;
+          logboekenHtml += '<th style="background: #e8f5e9; padding: 4px;">' + val + '</th>';
         });
-        logboekenHtml += `</tr>`;
+        logboekenHtml += '</tr>';
 
-        dataRows.forEach(row => {
-          logboekenHtml += `<tr>`;
-          row.forEach((cell, cellIdx) => {
+        dataRows.forEach(function(row) {
+          logboekenHtml += '<tr>';
+          row.forEach(function(cell, cellIdx) {
             if (skipIndices.includes(cellIdx)) return;
             let val = cell !== null ? String(cell) : '';
-            if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
-            logboekenHtml += `<td style="padding: 4px;">${val}</td>`;
+            if (val.startsWith('http')) {
+              val = '<a href="' + val + '" target="_blank">🔗 Bekijk foto</a>';
+            }
+            logboekenHtml += '<td style="padding: 4px;">' + val + '</td>';
           });
-          logboekenHtml += `</tr>`;
+          logboekenHtml += '</tr>';
         });
-        logboekenHtml += `</table></div>`;
+        logboekenHtml += '</table></div>';
 
         let parsedRows = [];
-        dataRows.forEach(row => {
+        dataRows.forEach(function(row) {
           let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
           let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
           let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
@@ -426,7 +413,7 @@
           let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
           let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
-          row.forEach(cell => {
+          row.forEach(function(cell) {
             let c = cell !== null ? String(cell).trim() : '';
             if (/^K[1-8]$/i.test(c)) vak = c;
             if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
@@ -434,36 +421,24 @@
 
           if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
           if (!vak) vak = 'K1';
+          if (notitie.startsWith('http')) notitie = '';
+          if (!notitie && (!foto || !foto.startsWith('http'))) return;
 
-          if (notitie.startsWith('http')) {
-            notitie = '';
-          }
-
-          if (!notitie && (!foto || !foto.startsWith('http'))) {
-            return;
-          }
-
-          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
+          parsedRows.push({ datum: datum, naam: naam, vak: vak, kruid: kruid, notitie: notitie, foto: foto });
         });
 
-        parsedRows.forEach(item => {
-          let fotoHtml = item.foto && item.foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${item.foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
-          
+        parsedRows.forEach(function(item) {
+          let fotoHtml = item.foto && item.foto.startsWith('http') ? '<div style="margin-top: 4px;"><a href="' + item.foto + '" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>' : '';
           let inhoudHtml = '';
           if (item.kruid && item.notitie) {
-            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong> | Notitie: ${item.notitie}</div>`;
+            inhoudHtml = '<div>Kruid: <strong>' + item.kruid + '</strong> | Notitie: ' + item.notitie + '</div>';
           } else if (item.kruid) {
-            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong></div>`;
+            inhoudHtml = '<div>Kruid: <strong>' + item.kruid + '</strong></div>';
           } else if (item.notitie) {
-            inhoudHtml = `<div>Notitie: ${item.notitie}</div>`;
+            inhoudHtml = '<div>Notitie: ' + item.notitie + '</div>';
           }
 
-          allNotesHtml += `
-            <div class="log-entry">
-              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${item.vak} - ${String(item.datum).substring(0, 16)})</span><br>
-              ${inhoudHtml}
-              ${fotoHtml}
-            </div>`;
+          allNotesHtml += '<div class="log-entry"><strong>👤 ' + item.naam + '</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ' + item.vak + ' - ' + String(item.datum).substring(0, 16) + ')</span><br>' + inhoudHtml + fotoHtml + '</div>';
         });
       });
 
@@ -471,7 +446,6 @@
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
-    // --- FUNCTIE: FORMULIER VERSTUREN & CLIENT-SIDE COMPRESSIE ---
     function handleFormSubmit(event) {
       event.preventDefault();
       const submitBtn = document.getElementById('submitBtn');
@@ -520,21 +494,20 @@
       }
     }
 
-    // --- FUNCTIE: VERSTUREN NAAR GOOGLE APPS SCRIPT ---
     function sendPayload(payload, submitBtn) {
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(payload)
       })
-      .then(res => res.json())
-      .then(res => {
+      .then(function(res) { return res.json(); })
+      .then(function(res) {
         alert('Inzending succesvol verstuurd met schone foto-link!');
         document.getElementById('fieldForm').reset();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
         switchTab('wiki', document.querySelector('.nav-btn'));
       })
-      .catch(err => {
+      .catch(function(err) {
         alert('Fout bij verzenden: ' + err);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
