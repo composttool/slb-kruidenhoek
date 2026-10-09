@@ -1,16 +1,16 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 9-10-2026-0950
+   Versie: 9-10-2026-1024
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale image 
-                compressie (max 5MB, alleen afbeeldingen), en 'klik-om-te-bekijken'
-                foto-weergave voor de logboeken.
+                compressie, automatische GitHub API upload naar de juiste 
+                vak-map (img/K1 t/m K8), en schone URL-doorsturing naar Google Sheets.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.7)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.8)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -184,7 +184,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.7 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.8 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
@@ -289,9 +289,18 @@
   </div>
 
   <script>
+    // --- CONFIGURATIE ---
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
+    
+    // Jouw GitHub Gegevens voor automatische foto-uploads
+    const GITHUB_USER = 'composttool';      // Jouw GitHub gebruikersnaam
+    const GITHUB_REPO = 'slb-kruidenhoek';   // Jouw repository naam
+    const GITHUB_BRANCH = 'main';          // Branch naam
+    const GITHUB_TOKEN = 'JOUW_GITHUB_PERSONAL_ACCESS_TOKEN_HIER'; // Vervang dit door je GitHub Token
+
     let globalPlantData = [];
 
+    // --- INITIALISATIE & EVENT LISTENERS ---
     window.addEventListener('DOMContentLoaded', function() {
       const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
       document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
@@ -313,7 +322,7 @@
         fieldForm.addEventListener('submit', handleFormSubmit);
       }
 
-      // Laad direct het lokale kruideninfo.json bestand voor de Wiki-zoekfunctie[cite: 1]
+      // Laad lokaal kruideninfo.json bestand voor de Wiki-zoekfunctie[cite: 1]
       fetch('kruideninfo.json')
         .then(response => {
           if (!response.ok) throw new Error('Kon kruideninfo.json niet laden');
@@ -329,6 +338,7 @@
         });
     });
 
+    // --- FUNCTIE: WIKI & ZOEKFILTER ---
     function filterWiki() {
       const searchInputElem = document.getElementById('searchInput');
       const query = searchInputElem ? searchInputElem.value.toLowerCase().trim() : '';
@@ -373,6 +383,7 @@
       container.innerHTML = wikiHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie gevonden voor "${query}".</p>`;
     }
 
+    // --- FUNCTIE: NAVIGATIE & CACHE BEHEER ---
     function forceRefreshData() {
       sessionStorage.removeItem('kruidenhoek_data');
       sessionStorage.removeItem('kruidenhoek_time');
@@ -405,6 +416,7 @@
       if (btnElement) btnElement.classList.add('active');
     }
 
+    // --- FUNCTIE: DATA LADEN UIT GOOGLE SHEETS ---
     function loadDashboardData() {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -430,6 +442,7 @@
         });
     }
 
+    // --- FUNCTIE: LOGBOEKEN & REACTIES WEERGEVEN ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -513,7 +526,6 @@
             details.push('Notities of opmerkingen: ' + notitie);
           }
 
-          // Snelle weergave: Foto wordt pas geladen na klik op de knop om vertraging te voorkomen
           let fotoHtml = '';
           if (foto && foto.startsWith('http')) {
             fotoHtml = `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto bij inzending</a></div>`;
@@ -532,21 +544,21 @@
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
+    // --- FUNCTIE: FORMULIER VERSTUREN & FOTO AUTOMATISCH NAAR GITHUB UPLOADEN ---
     function handleFormSubmit(event) {
       event.preventDefault();
       
       const submitBtn = document.getElementById('submitBtn');
       const fileInput = document.getElementById('foto');
       const file = fileInput.files[0];
+      const selectedVak = document.getElementById('vak').value; // bijv. K1 t/m K8
 
-      // 1. Validatie: Alleen afbeeldingen toestaan
       if (file) {
         if (!file.type.startsWith('image/')) {
           alert('Alleen afbeeldingsbestanden (JPG, PNG, etc.) zijn toegestaan!');
           return;
         }
 
-        // 2. Validatie: Maximaal 5 MB
         const maxSizeMB = 5;
         if (file.size > maxSizeMB * 1024 * 1024) {
           alert(`De foto is te groot (${(file.size / (1024*1024)).toFixed(1)} MB). Het maximum is ${maxSizeMB} MB.`);
@@ -555,11 +567,11 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Foto comprimeren & verzenden...';
+      submitBtn.textContent = file ? 'Foto comprimeren & uploaden naar GitHub...' : 'Inzending verzenden...';
 
       const payload = {
         naam: document.getElementById('naam').value,
-        vak: document.getElementById('vak').value,
+        vak: selectedVak,
         kruidsoort: document.getElementById('kruidsoort').value,
         actie: document.getElementById('actie').value,
         ziekte: document.getElementById('ziekte').value,
@@ -568,48 +580,88 @@
       };
 
       if (file) {
-        // 3. Client-side compressie via Canvas om laadtijd en bestandsgrootte te minimaliseren
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = function(e) {
-          const img = new Image();
-          img.src = e.target.result;
-          img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Comprimeren naar JPEG met 80% kwaliteit
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            payload.foto = compressedDataUrl;
-
-            sendDataToScript(payload, submitBtn);
-          };
-        };
+        compressAndUploadImage(file, selectedVak, payload, submitBtn);
       } else {
         sendDataToScript(payload, submitBtn);
       }
     }
 
+    // --- FUNCTIE: CLIENT-SIDE COMPRESSIE & GITHUB API UPLOAD ---
+    function compressAndUploadImage(file, vak, payload, submitBtn) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Omzetten naar base64 JPEG (80% kwaliteit) zonder data-prefix
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          const base64Content = dataUrl.split(',')[1];
+
+          // Unieke bestandsnaam genereren op basis van datum en tijd
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const fileName = `foto_${timestamp}.jpg`;
+          const filePath = `img/${vak}/${fileName}`; // Wordt geplaatst in img/K1/, img/K2/, etc.
+
+          // GitHub API Aanroep voor file upload
+          const githubApiUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${filePath}`;
+          
+          fetch(githubApiUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${GITHUB_TOKEN}`,
+              'Content-Type': 'application/json',
+              'Accept': 'vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              message: `Automatische upload foto voor ${vak} via Veldinvoer`,
+              content: base64Content,
+              branch: GITHUB_BRANCH
+            })
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Kon foto niet uploaden naar GitHub (controleer je token)');
+            return response.json();
+          })
+          .then(data => {
+            // Genereer de schone URL van de foto op GitHub Pages
+            payload.foto = `https://${GITHUB_USER}.github.io/${GITHUB_REPO}/img/${vak}/${fileName}`;
+            sendDataToScript(payload, submitBtn);
+          })
+          .catch(err => {
+            console.error('GitHub Upload Fout:', err);
+            alert('Fout bij uploaden foto naar GitHub: ' + err.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Inzending Versturen';
+          });
+        };
+      };
+    }
+
+    // --- FUNCTIE: DATA VERSTUREN NAAR GOOGLE APPS SCRIPT WEB APP ---
     function sendDataToScript(payload, submitBtn) {
       fetch(SCRIPT_URL, {
         method: 'POST',
@@ -618,7 +670,7 @@
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert('Inzending succesvol verstuurd!');
+        alert('Inzending succesvol verstuurd met schone foto-link!');
         document.getElementById('fieldForm').reset();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
@@ -630,7 +682,7 @@
         switchTab('wiki', document.querySelector('.nav-btn'));
       })
       .catch(err => {
-        alert('Fout bij verzenden: ' + err);
+        alert('Fout bij verzenden naar Google Sheet: ' + err);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
       });
