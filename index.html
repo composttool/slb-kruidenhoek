@@ -1,9 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1515
+   Versie: 09-10-2026-1520
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en perfecte datumsortering 
+                dynamische header-herkenning, en feilloze numerieke datumsortering 
                 (nieuwste altijd bovenaan).
    ============================================================ -->
 <!DOCTYPE html>
@@ -343,15 +343,23 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- HULPFUNCTIE: DATUM PARSEN VOOR CORRECTE SORTERING ---
-    function parseDateValue(val) {
+    // --- HULPFUNCTIE: ULTRA-ROBUUSTE NUMERIEKE DATUM-PARSER VOOR SORTERING ---
+    function parseDateToNumeric(val) {
       if (!val) return 0;
-      let d = new Date(val);
-      if (!isNaN(d.getTime())) return d.getTime();
-      return 0;
+      let s = String(val).trim();
+      // Haal alle cijfers uit de string in de juiste volgorde (YYYYMMDDHHMMSS)
+      let digits = s.replace(/\D/g, '');
+      if (digits.length >= 8) {
+        // Vul aan tot 14 cijfers (tot op de seconde) indien nodig voor correcte vergelijking
+        while (digits.length < 14) digits += '0';
+        return parseInt(digits.substring(0, 14), 10);
+      }
+      // Fallback op standaard Date parser
+      let d = new Date(s);
+      return !isNaN(d.getTime()) ? d.getTime() : 0;
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (STRIKTE DATUM-SORTERING: NIEUWSTE BOVEN) ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (STRIKTE NUMERIEKE SORTERING: NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -380,11 +388,11 @@
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
         
-        // Sorteer dataRows op basis van de echte datum-tijdswaarde (nieuwste bovenaan)
+        // Sorteer dataRows strikt numeriek op basis van de datum (hoogste getal / nieuwste datum bovenaan)
         dataRows.sort((a, b) => {
-          let timeA = idxDatum > -1 ? parseDateValue(a[idxDatum]) : parseDateValue(a[0]);
-          let timeB = idxDatum > -1 ? parseDateValue(b[idxDatum]) : parseDateValue(b[0]);
-          return timeB - timeA; // Aflopend: hoogste timestamp (nieuwste) eerst
+          let valA = idxDatum > -1 ? a[idxDatum] : a[0];
+          let valB = idxDatum > -1 ? b[idxDatum] : b[0];
+          return parseDateToNumeric(valB) - parseDateToNumeric(valA);
         });
 
         // Bouw ruwe tabel met correct gesorteerde rijen
@@ -436,7 +444,7 @@
             return;
           }
 
-          parsedRows.push({ datum, naam, vak, kruid, notitie, foto, timeVal: parseDateValue(datum) });
+          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
         });
 
         // Genereer de HTML voor de opmerkingen-kaarten
