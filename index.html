@@ -1,16 +1,16 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 9-10-2026-1024
-   Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale image 
-                compressie, automatische GitHub API upload naar de juiste 
-                vak-map (img/K1 t/m K8), en schone URL-doorsturing naar Google Sheets.
+   Versie: 9-10-2026-1049
+   Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
+                compressie, en veilige doorgifte naar Google Apps Script voor 
+                automatische GitHub opslag in vak-mappen (K1 t/m K8).
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.8)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.9)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -57,7 +57,6 @@
       font-weight: bold;
       cursor: pointer;
       font-size: 0.85rem;
-      transition: background 0.2s;
     }
     .nav-btn.active {
       background: var(--primary);
@@ -73,22 +72,11 @@
     }
     h2 { font-size: 1.1rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary-light); padding-bottom: 6px; }
     
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .form-group {
-      margin-bottom: 12px;
-    }
-    label {
-      display: block;
-      font-weight: bold;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-    }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 0.85rem; }
     input[type="text"], select, textarea {
       width: 100%;
       padding: 10px;
@@ -110,9 +98,7 @@
       cursor: pointer;
       width: 100%;
     }
-    .action-btn {
-      margin-bottom: 15px;
-    }
+    .action-btn { margin-bottom: 15px; }
 
     .plant-card {
       background: #fafafa;
@@ -122,24 +108,9 @@
       padding: 12px;
       margin-bottom: 12px;
     }
-    .plant-title {
-      font-size: 1.15rem;
-      font-weight: bold;
-      color: var(--primary);
-      margin-bottom: 2px;
-    }
-    .plant-subtitle {
-      font-size: 0.85rem;
-      font-style: italic;
-      color: #555;
-      margin-bottom: 8px;
-    }
-    .plant-info-grid {
-      font-size: 0.85rem;
-      display: grid;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
+    .plant-title { font-size: 1.15rem; font-weight: bold; color: var(--primary); margin-bottom: 2px; }
+    .plant-subtitle { font-size: 0.85rem; font-style: italic; color: #555; margin-bottom: 8px; }
+    .plant-info-grid { font-size: 0.85rem; display: grid; gap: 6px; margin-bottom: 8px; }
     .warning-box {
       background: #fff3e0;
       border-left: 4px solid #ff8f00;
@@ -158,25 +129,9 @@
       font-size: 0.85rem;
     }
 
-    .loading {
-      text-align: center;
-      color: #666;
-      font-style: italic;
-      padding: 15px;
-    }
-    
-    .refresh-bar {
-      text-align: right;
-      margin-bottom: 8px;
-    }
-    .refresh-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 0.8rem;
-      cursor: pointer;
-      text-decoration: underline;
-    }
+    .loading { text-align: center; color: #666; font-style: italic; padding: 15px; }
+    .refresh-bar { text-align: right; margin-bottom: 8px; }
+    .refresh-btn { background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -184,7 +139,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.8 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.9 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
@@ -195,7 +150,7 @@
       <button class="nav-btn" data-target="logboeken">📁 Alle Reacties</button>
     </div>
 
-    <!-- Tab 1: Wiki & Zoeken (Startpagina) -->
+    <!-- Tab 1: Wiki & Zoeken -->
     <div id="wiki" class="tab-content active">
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
@@ -208,16 +163,14 @@
       </div>
     </div>
 
-    <!-- Tab 2: Actieve Opmerkingen -->
+    <!-- Tab 2: Opmerkingen -->
     <div id="opmerkingen" class="tab-content">
       <div class="card">
         <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
         <h2>💡 Recente Acties & Veldnotities</h2>
-        
         <div id="loadActionContainer">
           <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
         </div>
-
         <div id="notesContainer"></div>
       </div>
     </div>
@@ -267,7 +220,7 @@
             <textarea id="notities" placeholder="Typ hier je opmerkingen..."></textarea>
           </div>
           <div class="form-group">
-            <label for="foto">Foto (optioneel, max 5MB, alleen afbeeldingen):</label>
+            <label for="foto">Foto (optioneel, max 5MB):</label>
             <input type="file" id="foto" accept="image/*">
           </div>
           <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
@@ -275,7 +228,7 @@
       </div>
     </div>
 
-    <!-- Tab 4: Alle Formulier Reacties -->
+    <!-- Tab 4: Alle Reacties -->
     <div id="logboeken" class="tab-content">
       <div class="card">
         <h2>📁 Ruwe Formulier Reacties</h2>
@@ -291,13 +244,6 @@
   <script>
     // --- CONFIGURATIE ---
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
-    
-    // Jouw GitHub Gegevens voor automatische foto-uploads
-    const GITHUB_USER = 'composttool';      // Jouw GitHub gebruikersnaam
-    const GITHUB_REPO = 'slb-kruidenhoek';   // Jouw repository naam
-    const GITHUB_BRANCH = 'main';          // Branch naam
-    const GITHUB_TOKEN = 'JOUW_GITHUB_PERSONAL_ACCESS_TOKEN_HIER'; // Vervang dit door je GitHub Token
-
     let globalPlantData = [];
 
     // --- INITIALISATIE & EVENT LISTENERS ---
@@ -307,194 +253,112 @@
 
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-          const targetId = this.getAttribute('data-target');
-          switchTab(targetId, this);
+          switchTab(this.getAttribute('data-target'), this);
         });
       });
 
       const searchInput = document.getElementById('searchInput');
-      if (searchInput) {
-        searchInput.addEventListener('input', filterWiki);
-      }
+      if (searchInput) searchInput.addEventListener('input', filterWiki);
 
       const fieldForm = document.getElementById('fieldForm');
-      if (fieldForm) {
-        fieldForm.addEventListener('submit', handleFormSubmit);
-      }
+      if (fieldForm) fieldForm.addEventListener('submit', handleFormSubmit);
 
-      // Laad lokaal kruideninfo.json bestand voor de Wiki-zoekfunctie[cite: 1]
+      // Laad kruideninfo.json voor wiki[cite: 1]
       fetch('kruideninfo.json')
-        .then(response => {
-          if (!response.ok) throw new Error('Kon kruideninfo.json niet laden');
-          return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
           globalPlantData = data;
           document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
         })
-        .catch(err => {
-          console.error('Fout bij laden kruideninfo.json:', err);
-          document.getElementById('wikiContainer').innerHTML = '<p style="color: red;">Fout bij laden van kruideninfo.json</p>';
-        });
+        .catch(err => console.error('Fout bij laden kruideninfo.json:', err));
     });
 
     // --- FUNCTIE: WIKI & ZOEKFILTER ---
     function filterWiki() {
-      const searchInputElem = document.getElementById('searchInput');
-      const query = searchInputElem ? searchInputElem.value.toLowerCase().trim() : '';
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const container = document.getElementById('wikiContainer');
-      
-      if (!globalPlantData || globalPlantData.length === 0) {
-        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Bezig met laden van de database...</p>';
+      if (!globalPlantData.length) return;
+      if (!query) {
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven...</p>';
         return;
       }
-
-      if (query === '') {
-        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven (bijv. Rozemarijn, Tijm) om de wiki-informatie op te halen.</p>';
-        return;
-      }
-
-      let wikiHtml = '';
-
+      let html = '';
       globalPlantData.forEach(item => {
         let soort = String(item.soort || '');
         let latijn = String(item.latijnseNaam || '');
-        
         if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
-          wikiHtml += `
+          html += `
             <div class="plant-card">
               <div class="plant-title">🌿 ${soort}</div>
-              ${latijn ? `<div class="plant-subtitle">${latijn}${item.functie ? ' — ' + item.functie : ''}</div>` : ''}
-              
+              ${latijn ? `<div class="plant-subtitle">${latijn}</div>` : ''}
               <div class="plant-info-grid">
                 ${item.omschrijving ? `<div><strong>Beschrijving:</strong> ${item.omschrijving}</div>` : ''}
                 ${item.standplaats ? `<div>☀️ <strong>Standplaats:</strong> ${item.standplaats}</div>` : ''}
-                ${item.snoeimoment ? `<div>✂️ <strong>Snoei:</strong> ${item.snoeimoment}</div>` : ''}
-                ${item.oogstdeel ? `<div>🧺 <strong>Oogst:</strong> ${item.oogstdeel}</div>` : ''}
-                ${item.toepassing ? `<div>💡 <strong>Toepassing:</strong> ${item.toepassing}</div>` : ''}
               </div>
-              
-              ${item.waarschuwing ? `<div class="warning-box">⚠️ <strong>Waarschuwing:</strong> ${item.waarschuwing}</div>` : ''}
-            </div>
-          `;
+            </div>`;
         }
       });
-
-      container.innerHTML = wikiHtml || `<p style="color: #666; font-style: italic; font-size: 0.85rem;">Geen wiki-informatie gevonden voor "${query}".</p>`;
+      container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
     }
 
-    // --- FUNCTIE: NAVIGATIE & CACHE BEHEER ---
+    // --- FUNCTIE: CACHE & NAVIGATIE BEHEER ---
     function forceRefreshData() {
-      sessionStorage.removeItem('kruidenhoek_data');
-      sessionStorage.removeItem('kruidenhoek_time');
+      sessionStorage.clear();
       document.getElementById('notesContainer').innerHTML = '';
       document.getElementById('logboekenContainer').innerHTML = '';
       showLoadButtons();
-      alert('Cache voor logboeken gewist.');
+      alert('Cache gewist.');
     }
 
     function hideLoadButtons() {
-      const btn1 = document.getElementById('loadActionContainer');
-      const btn2 = document.getElementById('loadActionContainer2');
-      if (btn1) btn1.style.display = 'none';
-      if (btn2) btn2.style.display = 'none';
+      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
     }
 
     function showLoadButtons() {
-      const btn1 = document.getElementById('loadActionContainer');
-      const btn2 = document.getElementById('loadActionContainer2');
-      if (btn1) btn1.style.display = 'block';
-      if (btn2) btn2.style.display = 'block';
+      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = 'block';
+      });
     }
 
-    function switchTab(tabId, btnElement) {
+    function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-      
-      const targetTab = document.getElementById(tabId);
-      if (targetTab) targetTab.classList.add('active');
-      if (btnElement) btnElement.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      if (btn) btn.classList.add('active');
     }
 
     // --- FUNCTIE: DATA LADEN UIT GOOGLE SHEETS ---
     function loadDashboardData() {
-      const notesContainer = document.getElementById('notesContainer');
-      const logboekenContainer = document.getElementById('logboekenContainer');
-      
-      notesContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets (even geduld)...</div>';
-      logboekenContainer.innerHTML = '<div class="loading">Gegevens ophalen uit Google Sheets (even geduld)...</div>';
-
-      if (!SCRIPT_URL) return;
-
       fetch(SCRIPT_URL)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-          const now = new Date().toLocaleString('nl-NL');
-          sessionStorage.setItem('kruidenhoek_data', JSON.stringify(data));
-          sessionStorage.setItem('kruidenhoek_time', now);
-
           displayLogs(data);
           hideLoadButtons();
         })
-        .catch(err => {
-          notesContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
-          logboekenContainer.innerHTML = '<div style="color: red; font-size: 0.85rem;">Fout bij ophalen data: ' + err.message + '</div>';
-        });
+        .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & REACTIES WEERGEVEN ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
-      
-      if (!Array.isArray(plantData) || plantData.length === 0) {
-        notesContainer.innerHTML = '<p>Geen data ontvangen.</p>';
-        return;
-      }
-
-      let allNotesHtml = '';
-      let logboekenHtml = '';
+      let allNotesHtml = '', logboekenHtml = '';
 
       plantData.forEach(source => {
-        let sheetName = String(source.sheetName || '').toLowerCase();
-        if (sheetName.includes('kruidenhoek')) return;
-
         let logboek = source.logboek;
-        if (!logboek || logboek.length === 0) return;
-
-        let headers = logboek[0].map(h => String(h).toLowerCase().trim());
-        
-        function findColumnIndex(keywords) {
-          for (let i = 0; i < headers.length; i++) {
-            let h = headers[i];
-            for (let k = 0; k < keywords.length; k++) {
-              if (h.includes(keywords[k])) return i;
-            }
-          }
-          return -1;
-        }
-
-        let idxDatum = findColumnIndex(['datum', 'tijdstempel', 'timestamp', 'date']);
-        let idxNaam = findColumnIndex(['naam', 'name', 'wie', 'ingevuld']);
-        let idxZiekte = findColumnIndex(['ziekte', 'waarneming', 'gebrek', 'disease']);
-        let idxNotitie = findColumnIndex(['notitie', 'opmerking', 'comment', 'toelichting', 'tekst']);
-        let idxFoto = findColumnIndex(['foto', 'link', 'url', 'afbeelding']);
-        let idxKruid = findColumnIndex(['kruid', 'plant', 'soort']);
-        let idxVak = findColumnIndex(['vak']);
+        if (!logboek || !logboek.length) return;
 
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         logboek.forEach((row, index) => {
           logboekenHtml += `<tr>`;
           row.forEach(cell => {
-            let cellContent = cell !== null ? String(cell) : '';
-            if (cellContent.startsWith('http')) {
-              cellContent = `<a href="${cellContent}" target="_blank">🔗 Bekijk foto</a>`;
-            }
-            if (index === 0) {
-              logboekenHtml += `<th style="background: #e8f5e9; padding: 4px; text-align: left;">${cellContent}</th>`;
-            } else {
-              logboekenHtml += `<td style="padding: 4px;">${cellContent}</td>`;
-            }
+            let val = cell !== null ? String(cell) : '';
+            if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
+            logboekenHtml += index === 0 ? `<th style="background: #e8f5e9; padding: 4px;">${val}</th>` : `<td style="padding: 4px;">${val}</td>`;
           });
           logboekenHtml += `</tr>`;
         });
@@ -502,72 +366,38 @@
 
         for (let i = logboek.length - 1; i >= 1; i--) {
           let row = logboek[i];
-          let datum = idxDatum !== -1 ? row[idxDatum] : (row[0] || '');
-          let naam = idxNaam !== -1 ? row[idxNaam] : 'Onbekend';
-          let kruid = idxKruid !== -1 ? row[idxKruid] : '';
-          let vak = idxVak !== -1 ? row[idxVak] : '';
-          let ziekte = idxZiekte !== -1 ? row[idxZiekte] : '';
-          let notitie = idxNotitie !== -1 ? row[idxNotitie] : '';
-          let foto = idxFoto !== -1 ? row[idxFoto] : '';
-
-          if (!foto) {
-            row.forEach(cell => {
-              if (cell && String(cell).startsWith('http')) foto = cell;
-            });
-          }
-
-          let details = [];
-          if (vak) details.push('Vak: ' + vak);
-          if (kruid) details.push('Kruid: ' + kruid);
-          if (ziekte && String(ziekte).toLowerCase() !== 'geen' && String(ziekte).trim() !== '') {
-            details.push('Ziekte of waarneming: ' + ziekte);
-          }
-          if (notitie && String(notitie).trim() !== '') {
-            details.push('Notities of opmerkingen: ' + notitie);
-          }
-
-          let fotoHtml = '';
-          if (foto && foto.startsWith('http')) {
-            fotoHtml = `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto bij inzending</a></div>`;
-          }
+          let datum = row[0] || '', naam = row[1] || 'Onbekend', vak = row[2] || '', kruid = row[3] || '', notitie = row[6] || '', foto = row[7] || '';
+          
+          let fotoHtml = foto && foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
 
           allNotesHtml += `
             <div class="log-entry">
-              <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(${String(datum).substring(0, 16)})</span><br>
-              <div style="margin-top: 3px;">${details.join(' | ')}</div>
+              <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(datum).substring(0, 16)})</span><br>
+              <div>Kruid: ${kruid} | Notitie: ${notitie}</div>
               ${fotoHtml}
             </div>`;
         }
       });
 
-      notesContainer.innerHTML = allNotesHtml || '<p>Geen recente opmerkingen gevonden.</p>';
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen.</p>';
       logboekenContainer.innerHTML = logboekenHtml;
     }
 
-    // --- FUNCTIE: FORMULIER VERSTUREN & FOTO AUTOMATISCH NAAR GITHUB UPLOADEN ---
+    // --- FUNCTIE: FORMULIER VERSTUREN & CLIENT-SIDE COMPRESSIE ---
     function handleFormSubmit(event) {
       event.preventDefault();
-      
       const submitBtn = document.getElementById('submitBtn');
       const fileInput = document.getElementById('foto');
       const file = fileInput.files[0];
-      const selectedVak = document.getElementById('vak').value; // bijv. K1 t/m K8
+      const selectedVak = document.getElementById('vak').value;
 
-      if (file) {
-        if (!file.type.startsWith('image/')) {
-          alert('Alleen afbeeldingsbestanden (JPG, PNG, etc.) zijn toegestaan!');
-          return;
-        }
-
-        const maxSizeMB = 5;
-        if (file.size > maxSizeMB * 1024 * 1024) {
-          alert(`De foto is te groot (${(file.size / (1024*1024)).toFixed(1)} MB). Het maximum is ${maxSizeMB} MB.`);
-          return;
-        }
+      if (file && file.size > 5 * 1024 * 1024) {
+        alert('Foto is groter dan 5MB.');
+        return;
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = file ? 'Foto comprimeren & uploaden naar GitHub...' : 'Inzending verzenden...';
+      submitBtn.textContent = file ? 'Foto comprimeren & verzenden...' : 'Inzending verzenden...';
 
       const payload = {
         naam: document.getElementById('naam').value,
@@ -576,113 +406,48 @@
         actie: document.getElementById('actie').value,
         ziekte: document.getElementById('ziekte').value,
         notities: document.getElementById('notities').value,
-        foto: ''
+        fotoBase64: ''
       };
 
       if (file) {
-        compressAndUploadImage(file, selectedVak, payload, submitBtn);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(e) {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            const max = 1200;
+            if (w > h && w > max) { h *= max / w; w = max; }
+            else if (h > max) { w *= max / h; h = max; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            payload.fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            sendPayload(payload, submitBtn);
+          };
+        };
       } else {
-        sendDataToScript(payload, submitBtn);
+        sendPayload(payload, submitBtn);
       }
     }
 
-    // --- FUNCTIE: CLIENT-SIDE COMPRESSIE & GITHUB API UPLOAD ---
-    function compressAndUploadImage(file, vak, payload, submitBtn) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Omzetten naar base64 JPEG (80% kwaliteit) zonder data-prefix
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          const base64Content = dataUrl.split(',')[1];
-
-          // Unieke bestandsnaam genereren op basis van datum en tijd
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          const fileName = `foto_${timestamp}.jpg`;
-          const filePath = `img/${vak}/${fileName}`; // Wordt geplaatst in img/K1/, img/K2/, etc.
-
-          // GitHub API Aanroep voor file upload
-          const githubApiUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${filePath}`;
-          
-          fetch(githubApiUrl, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `token ${GITHUB_TOKEN}`,
-              'Content-Type': 'application/json',
-              'Accept': 'vnd.github.v3+json'
-            },
-            body: JSON.stringify({
-              message: `Automatische upload foto voor ${vak} via Veldinvoer`,
-              content: base64Content,
-              branch: GITHUB_BRANCH
-            })
-          })
-          .then(response => {
-            if (!response.ok) throw new Error('Kon foto niet uploaden naar GitHub (controleer je token)');
-            return response.json();
-          })
-          .then(data => {
-            // Genereer de schone URL van de foto op GitHub Pages
-            payload.foto = `https://${GITHUB_USER}.github.io/${GITHUB_REPO}/img/${vak}/${fileName}`;
-            sendDataToScript(payload, submitBtn);
-          })
-          .catch(err => {
-            console.error('GitHub Upload Fout:', err);
-            alert('Fout bij uploaden foto naar GitHub: ' + err.message);
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Inzending Versturen';
-          });
-        };
-      };
-    }
-
-    // --- FUNCTIE: DATA VERSTUREN NAAR GOOGLE APPS SCRIPT WEB APP ---
-    function sendDataToScript(payload, submitBtn) {
+    // --- FUNCTIE: VERSTUREN NAAR GOOGLE APPS SCRIPT ---
+    function sendPayload(payload, submitBtn) {
       fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      .then(() => {
+      .then(res => res.json())
+      .then(res => {
         alert('Inzending succesvol verstuurd met schone foto-link!');
         document.getElementById('fieldForm').reset();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
-        
-        sessionStorage.removeItem('kruidenhoek_data');
-        sessionStorage.removeItem('kruidenhoek_time');
-        showLoadButtons();
-
         switchTab('wiki', document.querySelector('.nav-btn'));
       })
       .catch(err => {
-        alert('Fout bij verzenden naar Google Sheet: ' + err);
+        alert('Fout bij verzenden: ' + err);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Inzending Versturen';
       });
