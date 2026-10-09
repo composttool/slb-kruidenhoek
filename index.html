@@ -1,9 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 9-10-2026-1445
+   Versie: 09-10-2026-1500
    Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
                 compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en automatische fallbacks.
+                dynamische header-herkenning, en opgeschoonde tabellen zonder 
+                foutcodes of waarschuwingen.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -342,7 +343,7 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (MET DYNAMISCHE HEADERS & FALLBACKS) ---
+    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZONDER FOUTCODE / WAARSCHUWING) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -353,6 +354,15 @@
         if (!logboek || !logboek.length) return;
 
         let headers = logboek[0].map(h => String(h).trim().toLowerCase());
+        
+        // Bepaal welke kolommen we willen uitsluiten (foutcode, waarschuwing)
+        let skipIndices = [];
+        headers.forEach((h, idx) => {
+          if (h.includes('foutcode') || h.includes('waarschuwing')) {
+            skipIndices.push(idx);
+          }
+        });
+
         let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
         let idxNaam = headers.findIndex(h => h.includes('naam'));
         let idxVak = headers.findIndex(h => h === 'vak' || h.includes('vak'));
@@ -360,10 +370,12 @@
         let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
         let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
 
+        // Bouw de ruwe tabel op, maar sla de 'skipIndices' kolommen over
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         logboek.forEach((row, index) => {
           logboekenHtml += `<tr>`;
-          row.forEach(cell => {
+          row.forEach((cell, cellIdx) => {
+            if (skipIndices.includes(cellIdx)) return; // Sla foutcode en waarschuwing over
             let val = cell !== null ? String(cell) : '';
             if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
             logboekenHtml += index === 0 ? `<th style="background: #e8f5e9; padding: 4px;">${val}</th>` : `<td style="padding: 4px;">${val}</td>`;
