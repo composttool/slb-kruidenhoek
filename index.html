@@ -1,9 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1500 (Volledig geoptimaliseerd & gesorteerd)
+   Versie: 09-10-2026-1501 (Definitieve datumsortering fix)
    Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
-                koppeling, canvas compressie en nieuwste-bovenaan 
-                sortering voor zowel kaarten als tabellen.
+                koppeling, en robuuste Nederlandse datumpersevering 
+                voor correcte 'nieuwste bovenaan' sortering.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -343,14 +343,33 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
+    // --- ROBUUSTE DATUM PARSER VOOR ZOWEL ISO ALS NEDERLANDSE DATUMS ---
     function getTimestamp(val) {
       if (!val) return 0;
-      let d = new Date(String(val).trim());
-      let time = d.getTime();
-      return !isNaN(time) ? time : 0;
+      let str = String(val).trim();
+      
+      // 1. Probeer standaard Date parse (voor ISO formaten zoals 2026-10-09T...)
+      let d = new Date(str);
+      if (!isNaN(d.getTime())) return d.getTime();
+
+      // 2. Probeer Nederlands formaat (bijv. "21-10-2026 17:00:15" of "21-10-2026")
+      let parts = str.split(/[\s-/.:]+/);
+      if (parts.length >= 3) {
+        if (parts[0].length <= 2 && parts[2].length === 4) {
+          let day = parseInt(parts[0], 10);
+          let month = parseInt(parts[1], 10) - 1;
+          let year = parseInt(parts[2], 10);
+          let hour = parts[3] ? parseInt(parts[3], 10) : 0;
+          let min = parts[4] ? parseInt(parts[4], 10) : 0;
+          let sec = parts[5] ? parseInt(parts[5], 10) : 0;
+          let d2 = new Date(year, month, day, hour, min, sec);
+          if (!isNaN(d2.getTime())) return d2.getTime();
+        }
+      }
+      return 0;
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SORTERING (NIEUWSTE BOVEN VOOR ZOWEL KAARTEN ALS TABELLEN) ---
+    // --- FUNCTIE: LOGBOEKEN & SORTERING (NIEUWSTE BOVEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -379,7 +398,7 @@
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
 
-        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan) voor zowel tabel als kaarten
+        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan)
         dataRows.sort((a, b) => {
           let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
           let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
@@ -389,7 +408,6 @@
         // 1. Bouw de gesorteerde ruwe tabel
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         
-        // Header rij
         logboekenHtml += `<tr>`;
         headerRow.forEach((cell, cellIdx) => {
           if (skipIndices.includes(cellIdx)) return;
@@ -398,7 +416,6 @@
         });
         logboekenHtml += `</tr>`;
 
-        // Gesorteerde datarijen
         dataRows.forEach((row) => {
           logboekenHtml += `<tr>`;
           row.forEach((cell, cellIdx) => {
