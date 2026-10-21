@@ -1,9 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1501 (Definitieve datumsortering fix)
+   Versie: 09-10-2026-1502 (Definitieve sortering & vak-fix)
    Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
-                koppeling, en robuuste Nederlandse datumpersevering 
-                voor correcte 'nieuwste bovenaan' sortering.
+                koppeling, robuuste Nederlandse datumparser en 
+                correcte nieuwste-bovenaan sortering.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -343,29 +343,28 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- ROBUUSTE DATUM PARSER VOOR ZOWEL ISO ALS NEDERLANDSE DATUMS ---
+    // --- ROBUUSTE DATUM PARSER ---
     function getTimestamp(val) {
       if (!val) return 0;
       let str = String(val).trim();
       
-      // 1. Probeer standaard Date parse (voor ISO formaten zoals 2026-10-09T...)
-      let d = new Date(str);
-      if (!isNaN(d.getTime())) return d.getTime();
-
-      // 2. Probeer Nederlands formaat (bijv. "21-10-2026 17:00:15" of "21-10-2026")
-      let parts = str.split(/[\s-/.:]+/);
-      if (parts.length >= 3) {
-        if (parts[0].length <= 2 && parts[2].length === 4) {
-          let day = parseInt(parts[0], 10);
-          let month = parseInt(parts[1], 10) - 1;
-          let year = parseInt(parts[2], 10);
-          let hour = parts[3] ? parseInt(parts[3], 10) : 0;
-          let min = parts[4] ? parseInt(parts[4], 10) : 0;
-          let sec = parts[5] ? parseInt(parts[5], 10) : 0;
-          let d2 = new Date(year, month, day, hour, min, sec);
-          if (!isNaN(d2.getTime())) return d2.getTime();
-        }
+      // Probeer Nederlands formaat (DD-MM-YYYY HH:mm:ss of DD-MM-YYYY)
+      let parts = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+      if (parts) {
+        let day = parseInt(parts[1], 10);
+        let month = parseInt(parts[2], 10) - 1;
+        let year = parseInt(parts[3], 10);
+        let hour = parts[4] ? parseInt(parts[4], 10) : 0;
+        let min = parts[5] ? parseInt(parts[5], 10) : 0;
+        let sec = parts[6] ? parseInt(parts[6], 10) : 0;
+        let d = new Date(year, month, day, hour, min, sec);
+        if (!isNaN(d.getTime())) return d.getTime();
       }
+
+      // Probeer standaard ISO / Engelse parse
+      let d2 = new Date(str);
+      if (!isNaN(d2.getTime())) return d2.getTime();
+      
       return 0;
     }
 
@@ -438,14 +437,16 @@
           let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
           let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
-          row.forEach(cell => {
-            let c = cell !== null ? String(cell).trim() : '';
-            if (/^K[1-8]$/i.test(c)) vak = c;
-            if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
-          });
+          // Veilige foto check via index of fallback
+          if (!foto || !foto.startsWith('http')) {
+            row.forEach(cell => {
+              let c = cell !== null && typeof cell === 'string' ? cell.trim() : '';
+              if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
+            });
+          }
 
           if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
-          if (!vak) vak = 'K1';
+          if (!vak || vak.includes('HTMLElement')) vak = 'K1';
 
           if (notitie.startsWith('http')) {
             notitie = '';
@@ -472,7 +473,7 @@
 
           allNotesHtml += `
             <div class="log-entry">
-              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(item.datum).substring(0, 16)})</span><br>
+              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${item.vak} - ${String(item.datum).substring(0, 16)})</span><br>
               ${inhoudHtml}
               ${fotoHtml}
             </div>`;
