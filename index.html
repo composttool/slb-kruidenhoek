@@ -1,10 +1,9 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1500 (Aangepast voor 50-soorten JSON)
-   Omschrijving: Volledige frontend inclusief wiki-zoekfunctie, lokale canvas 
-                compressie, veilige doorgifte naar Google Apps Script, 
-                dynamische header-herkenning, en opgeschoonde tabellen zonder 
-                foutcodes of waarschuwingen.
+   Versie: 09-10-2026-1500 (Volledig geoptimaliseerd & gesorteerd)
+   Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
+                koppeling, canvas compressie en nieuwste-bovenaan 
+                sortering voor zowel kaarten als tabellen.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -269,7 +268,7 @@
         .catch(err => console.error('Fout bij laden kruideninfo.json:', err));
     });
 
-    // --- FUNCTIE: WIKI & ZOEKFILTER (AANGEPAST VOOR 50 SOORTEN JSON) ---
+    // --- FUNCTIE: WIKI & ZOEKFILTER ---
     function filterWiki() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const container = document.getElementById('wikiContainer');
@@ -344,7 +343,14 @@
         .catch(err => alert('Fout bij laden data: ' + err));
     }
 
-    // --- FUNCTIE: LOGBOEKEN & SCHONE FOTO-LINKS WEERGEVEN (ZONDER FOUTCODE / WAARSCHUWING) ---
+    function getTimestamp(val) {
+      if (!val) return 0;
+      let d = new Date(String(val).trim());
+      let time = d.getTime();
+      return !isNaN(time) ? time : 0;
+    }
+
+    // --- FUNCTIE: LOGBOEKEN & SORTERING (NIEUWSTE BOVEN VOOR ZOWEL KAARTEN ALS TABELLEN) ---
     function displayLogs(plantData) {
       const notesContainer = document.getElementById('notesContainer');
       const logboekenContainer = document.getElementById('logboekenContainer');
@@ -370,22 +376,44 @@
         let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
         let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
 
+        let headerRow = logboek[0];
+        let dataRows = logboek.slice(1);
+
+        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan) voor zowel tabel als kaarten
+        dataRows.sort((a, b) => {
+          let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
+          let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
+          return timeB - timeA;
+        });
+
+        // 1. Bouw de gesorteerde ruwe tabel
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
-        logboek.forEach((row, index) => {
+        
+        // Header rij
+        logboekenHtml += `<tr>`;
+        headerRow.forEach((cell, cellIdx) => {
+          if (skipIndices.includes(cellIdx)) return;
+          let val = cell !== null ? String(cell) : '';
+          logboekenHtml += `<th style="background: #e8f5e9; padding: 4px;">${val}</th>`;
+        });
+        logboekenHtml += `</tr>`;
+
+        // Gesorteerde datarijen
+        dataRows.forEach((row) => {
           logboekenHtml += `<tr>`;
           row.forEach((cell, cellIdx) => {
             if (skipIndices.includes(cellIdx)) return;
             let val = cell !== null ? String(cell) : '';
             if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
-            logboekenHtml += index === 0 ? `<th style="background: #e8f5e9; padding: 4px;">${val}</th>` : `<td style="padding: 4px;">${val}</td>`;
+            logboekenHtml += `<td style="padding: 4px;">${val}</td>`;
           });
           logboekenHtml += `</tr>`;
         });
         logboekenHtml += `</table></div>`;
 
-        for (let i = logboek.length - 1; i >= 1; i--) {
-          let row = logboek[i];
-          
+        // 2. Bouw de kaarten voor de opmerkingen tab
+        let parsedRows = [];
+        dataRows.forEach(row => {
           let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
           let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
           let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
@@ -407,27 +435,31 @@
           }
 
           if (!notitie && (!foto || !foto.startsWith('http'))) {
-            continue;
+            return;
           }
 
-          let fotoHtml = foto && foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
+        });
+
+        parsedRows.forEach(item => {
+          let fotoHtml = item.foto && item.foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${item.foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
           
           let inhoudHtml = '';
-          if (kruid && notitie) {
-            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong> | Notitie: ${notitie}</div>`;
-          } else if (kruid) {
-            inhoudHtml = `<div>Kruid: <strong>${kruid}</strong></div>`;
-          } else if (notitie) {
-            inhoudHtml = `<div>Notitie: ${notitie}</div>`;
+          if (item.kruid && item.notitie) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong> | Notitie: ${item.notitie}</div>`;
+          } else if (item.kruid) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong></div>`;
+          } else if (item.notitie) {
+            inhoudHtml = `<div>Notitie: ${item.notitie}</div>`;
           }
 
           allNotesHtml += `
             <div class="log-entry">
-              <strong>👤 ${naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(datum).substring(0, 16)})</span><br>
+              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${vak} - ${String(item.datum).substring(0, 16)})</span><br>
               ${inhoudHtml}
               ${fotoHtml}
             </div>`;
-        }
+        });
       });
 
       notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
