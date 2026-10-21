@@ -159,7 +159,6 @@
     let globalPlantData = [];
 
     document.addEventListener('DOMContentLoaded', function() {
-      // Navigatie tabs koppelen
       document.querySelectorAll('.nav-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           var target = this.getAttribute('data-target');
@@ -167,23 +166,19 @@
         });
       });
 
-      // Zoekveld koppelen
       var searchInput = document.getElementById('searchInput');
       if (searchInput) {
         searchInput.addEventListener('input', filterWiki);
       }
 
-      // Laad knoppen koppelen
       var loadBtn1 = document.getElementById('loadBtn1');
       var loadBtn2 = document.getElementById('loadBtn2');
       if (loadBtn1) loadBtn1.addEventListener('click', loadDashboardData);
       if (loadBtn2) loadBtn2.addEventListener('click', loadDashboardData);
 
-      // Formulier koppelen
       var form = document.getElementById('fieldForm');
       if (form) form.addEventListener('submit', handleFormSubmit);
 
-      // JSON inladen
       fetch('kruideninfo.json')
         .then(function(res) { return res.json(); })
         .then(function(data) {
