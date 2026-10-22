@@ -1,10 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 22-10-2026-1415 (Determinatie-knop in Veldinvoer)
+   Versie: 22-10-2026-1405 (Wiki AI Determinatie-knop)
    Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
                 koppeling, robuuste Nederlandse datumparser, 
                 correcte nieuwste-bovenaan sortering en AI
-                determinatie-knoppen bij Wiki én Veldinvoer.
+                determinatie-knop onder de Wiki-titel.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -171,6 +171,7 @@
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
         
+        <!-- Knop direct onder de titel -->
         <a href="https://www.plantidentifieronline.com/nl/tools/herb-identifier" target="_blank" rel="noopener noreferrer" class="ai-wiki-btn">
           🌿 Kruid niet herkend? Bepaal de soort met AI
         </a>
@@ -223,12 +224,6 @@
             <label for="kruidsoort">Kruidensoort:</label>
             <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn of Tijm">
           </div>
-
-          <!-- Determinatie-knop direct tussen Kruidensoort en Type Actie -->
-          <a href="https://www.plantidentifieronline.com/nl/tools/herb-identifier" target="_blank" rel="noopener noreferrer" class="ai-wiki-btn" style="margin-bottom: 12px;">
-            🌿 Kruid onbekend? Zoek soort op met AI
-          </a>
-
           <div class="form-group">
             <label for="actie">Type Actie / Onderhoud:</label>
             <select id="actie">
@@ -295,4 +290,95 @@
         .then(response => response.json())
         .then(data => {
           globalPlantData = data;
-          document.
+          document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
+        })
+        .catch(err => console.error('Fout bij laden kruideninfo.json:', err));
+    });
+
+    // --- FUNCTIE: WIKI & ZOEKFILTER ---
+    function filterWiki() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const container = document.getElementById('wikiContainer');
+      if (!globalPlantData.length) return;
+      if (!query) {
+        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven...</p>';
+        return;
+      }
+      let html = '';
+      globalPlantData.forEach(item => {
+        let soort = String(item.Soortnaam || item.soort || '');
+        let latijn = String(item['Latijnse naam'] || item.latijnseNaam || '');
+        
+        if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
+          let detailsHtml = '';
+          for (let key in item) {
+            if (key === 'Soortnaam' || key === 'Latijnse naam' || key === 'soort' || key === 'latijnseNaam' || !item[key]) continue;
+            detailsHtml += `<div class="wiki-field"><strong>${key}:</strong> ${item[key]}</div>`;
+          }
+
+          html += `
+            <div class="plant-card">
+              <div class="plant-title">🌿 ${soort}</div>
+              ${latijn ? `<div class="plant-subtitle">${latijn}</div>` : ''}
+              <div class="plant-info-grid">
+                ${detailsHtml}
+              </div>
+            </div>`;
+        }
+      });
+      container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
+    }
+
+    // --- FUNCTIE: CACHE & NAVIGATIE BEHEER ---
+    function forceRefreshData() {
+      sessionStorage.clear();
+      document.getElementById('notesContainer').innerHTML = '';
+      document.getElementById('logboekenContainer').innerHTML = '';
+      showLoadButtons();
+      alert('Cache gewist.');
+    }
+
+    function hideLoadButtons() {
+      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+
+    function showLoadButtons() {
+      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = 'block';
+      });
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    // --- FUNCTIE: DATA LADEN UIT GOOGLE SHEETS ---
+    function loadDashboardData() {
+      fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          displayLogs(data);
+          hideLoadButtons();
+        })
+        .catch(err => alert('Fout bij laden data: ' + err));
+    }
+
+    // --- ROBUUSTE DATUM PARSER ---
+    function getTimestamp(val) {
+      if (!val) return 0;
+      let str = String(val).trim();
+      
+      // Probeer Nederlands formaat (DD-MM-YYYY HH:mm:ss of DD-MM-YYYY)
+      let parts = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+      if (parts) {
+        let day = parseInt(parts[1], 10);
+        let month = parseInt(parts[2], 10) - 1;
+        let year = parseInt(parts[3], 10);
+        let hour = parts[4] ? parseInt(
