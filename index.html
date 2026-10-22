@@ -1,9 +1,10 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 09-10-2026-1502 (Definitieve sortering & vak-fix)
+   Versie: 22-10-2026-1405 (Wiki AI Determinatie-knop)
    Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
-                koppeling, robuuste Nederlandse datumparser en 
-                correcte nieuwste-bovenaan sortering.
+                koppeling, robuuste Nederlandse datumparser, 
+                correcte nieuwste-bovenaan sortering en AI
+                determinatie-knop onder de Wiki-titel.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
@@ -100,6 +101,26 @@
     }
     .action-btn { margin-bottom: 15px; }
 
+    .ai-wiki-btn {
+      display: block;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 8px;
+      margin-bottom: 15px;
+      transition: background 0.2s ease;
+    }
+    .ai-wiki-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
     .plant-card {
       background: #fafafa;
       border: 1px solid #d0e1d4;
@@ -149,6 +170,12 @@
     <div id="wiki" class="tab-content active">
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
+        
+        <!-- Knop direct onder de titel -->
+        <a href="https://www.plantidentifieronline.com/nl/tools/herb-identifier" target="_blank" rel="noopener noreferrer" class="ai-wiki-btn">
+          🌿 Kruid niet herkend? Bepaal de soort met AI
+        </a>
+
         <div class="form-group">
           <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Tijm, Rozemarijn, Munt)...">
         </div>
@@ -437,7 +464,6 @@
           let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
           let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
 
-          // Veilige foto check via index of fallback
           if (!foto || !foto.startsWith('http')) {
             row.forEach(cell => {
               let c = cell !== null && typeof cell === 'string' ? cell.trim() : '';
