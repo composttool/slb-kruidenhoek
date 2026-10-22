@@ -381,4 +381,204 @@
         let day = parseInt(parts[1], 10);
         let month = parseInt(parts[2], 10) - 1;
         let year = parseInt(parts[3], 10);
-        let hour = parts[4] ? parseInt(
+        let hour = parts[4] ? parseInt(parts[4], 10) : 0;
+        let min = parts[5] ? parseInt(parts[5], 10) : 0;
+        let sec = parts[6] ? parseInt(parts[6], 10) : 0;
+        let d = new Date(year, month, day, hour, min, sec);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+
+      // Probeer standaard ISO / Engelse parse
+      let d2 = new Date(str);
+      if (!isNaN(d2.getTime())) return d2.getTime();
+      
+      return 0;
+    }
+
+    // --- FUNCTIE: LOGBOEKEN & SORTERING (NIEUWSTE BOVEN) ---
+    function displayLogs(plantData) {
+      const notesContainer = document.getElementById('notesContainer');
+      const logboekenContainer = document.getElementById('logboekenContainer');
+      let allNotesHtml = '', logboekenHtml = '';
+
+      plantData.forEach(source => {
+        let logboek = source.logboek;
+        if (!logboek || !logboek.length) return;
+
+        let headers = logboek[0].map(h => String(h).trim().toLowerCase());
+        
+        let skipIndices = [];
+        headers.forEach((h, idx) => {
+          if (h.includes('foutcode') || h.includes('waarschuwing')) {
+            skipIndices.push(idx);
+          }
+        });
+
+        let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
+        let idxNaam = headers.findIndex(h => h.includes('naam'));
+        let idxVak = headers.findIndex(h => h === 'vak' || h.includes('vak'));
+        let idxKruid = headers.findIndex(h => h.includes('kruid') || h.includes('plant'));
+        let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
+        let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
+
+        let headerRow = logboek[0];
+        let dataRows = logboek.slice(1);
+
+        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan)
+        dataRows.sort((a, b) => {
+          let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
+          let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
+          return timeB - timeA;
+        });
+
+        // 1. Bouw de gesorteerde ruwe tabel
+        logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
+        
+        logboekenHtml += `<tr>`;
+        headerRow.forEach((cell, cellIdx) => {
+          if (skipIndices.includes(cellIdx)) return;
+          let val = cell !== null ? String(cell) : '';
+          logboekenHtml += `<th style="background: #e8f5e9; padding: 4px;">${val}</th>`;
+        });
+        logboekenHtml += `</tr>`;
+
+        dataRows.forEach((row) => {
+          logboekenHtml += `<tr>`;
+          row.forEach((cell, cellIdx) => {
+            if (skipIndices.includes(cellIdx)) return;
+            let val = cell !== null ? String(cell) : '';
+            if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
+            logboekenHtml += `<td style="padding: 4px;">${val}</td>`;
+          });
+          logboekenHtml += `</tr>`;
+        });
+        logboekenHtml += `</table></div>`;
+
+        // 2. Bouw de kaarten voor de opmerkingen tab
+        let parsedRows = [];
+        dataRows.forEach(row => {
+          let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
+          let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
+          let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
+          let kruid = idxKruid > -1 && row[idxKruid] ? String(row[idxKruid]).trim() : '';
+          let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
+          let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
+
+          if (!foto || !foto.startsWith('http')) {
+            row.forEach(cell => {
+              let c = cell !== null && typeof cell === 'string' ? cell.trim() : '';
+              if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
+            });
+          }
+
+          if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
+          if (!vak || vak.includes('HTMLElement')) vak = 'K1';
+
+          if (notitie.startsWith('http')) {
+            notitie = '';
+          }
+
+          if (!notitie && (!foto || !foto.startsWith('http'))) {
+            return;
+          }
+
+          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
+        });
+
+        parsedRows.forEach(item => {
+          let fotoHtml = item.foto && item.foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${item.foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
+          
+          let inhoudHtml = '';
+          if (item.kruid && item.notitie) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong> | Notitie: ${item.notitie}</div>`;
+          } else if (item.kruid) {
+            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong></div>`;
+          } else if (item.notitie) {
+            inhoudHtml = `<div>Notitie: ${item.notitie}</div>`;
+          }
+
+          allNotesHtml += `
+            <div class="log-entry">
+              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${item.vak} - ${String(item.datum).substring(0, 16)})</span><br>
+              ${inhoudHtml}
+              ${fotoHtml}
+            </div>`;
+        });
+      });
+
+      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
+      logboekenContainer.innerHTML = logboekenHtml;
+    }
+
+    // --- FUNCTIE: FORMULIER VERSTUREN & CLIENT-SIDE COMPRESSIE ---
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      const fileInput = document.getElementById('foto');
+      const file = fileInput.files[0];
+      const selectedVak = document.getElementById('vak').value;
+
+      if (file && file.size > 5 * 1024 * 1024) {
+        alert('Foto is groter dan 5MB.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = file ? 'Foto comprimeren & verzenden...' : 'Inzending verzenden...';
+
+      const payload = {
+        naam: document.getElementById('naam').value,
+        vak: selectedVak,
+        kruidsoort: document.getElementById('kruidsoort').value,
+        actie: document.getElementById('actie').value,
+        ziekte: document.getElementById('ziekte').value,
+        notities: document.getElementById('notities').value,
+        fotoBase64: ''
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(e) {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            const max = 1200;
+            if (w > h && w > max) { h *= max / w; w = max; }
+            else if (h > max) { w *= max / h; h = max; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            payload.fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            sendPayload(payload, submitBtn);
+          };
+        };
+      } else {
+        sendPayload(payload, submitBtn);
+      }
+    }
+
+    // --- FUNCTIE: VERSTUREN NAAR GOOGLE APPS SCRIPT ---
+    function sendPayload(payload, submitBtn) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert('Inzending succesvol verstuurd met schone foto-link!');
+        document.getElementById('fieldForm').reset();
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Inzending Versturen';
+        switchTab('wiki', document.querySelector('.nav-btn'));
+      })
+      .catch(err => {
+        alert('Fout bij verzenden: ' + err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Inzending Versturen';
+      });
+    }
+  </script>
+</body>
+</html>
