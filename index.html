@@ -1,17 +1,15 @@
 <!-- ============================================================
    Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 22-10-2026-1405 (Wiki AI Determinatie-knop)
-   Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
-                koppeling, robuuste Nederlandse datumparser, 
-                correcte nieuwste-bovenaan sortering en AI
-                determinatie-knop onder de Wiki-titel.
+   Versie: 23-10-2026-1120 (Wiki + Zoek/Registreer Module)
+   Omschrijving: Frontend met 50-soorten Wiki, live zoekfunctie
+                 én knop om onbekende kruiden door te sturen naar Sheets.
    ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.9)</title>
+  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.10)</title>
   <style>
     :root {
       --primary: #2e7d32;
@@ -121,6 +119,40 @@
       color: white;
     }
 
+    /* Zoek & Registreer Container Styling */
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .search-row input {
+      flex: 1;
+      min-width: 180px;
+    }
+    .search-register-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+      width: auto;
+    }
+    .search-register-btn:hover { background: var(--primary-dark, #1b5e20); }
+
+    .search-feedback {
+      margin-top: 10px;
+      padding: 10px;
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
     .plant-card {
       background: #fafafa;
       border: 1px solid #d0e1d4;
@@ -155,7 +187,7 @@
   <div class="container">
     <header>
       <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.9 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.10 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
       <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
     </header>
 
@@ -171,14 +203,17 @@
       <div class="card">
         <h2>🔍 Planten Wiki Database</h2>
         
-        <!-- Knop direct onder de titel -->
         <a href="https://www.plantidentifieronline.com/nl/tools/herb-identifier" target="_blank" rel="noopener noreferrer" class="ai-wiki-btn">
           🌿 Kruid niet herkend? Bepaal de soort met AI
         </a>
 
         <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Tijm, Rozemarijn, Munt)...">
+          <div class="search-row">
+            <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Tijm, Rozemarijn, Munt)...">
+            <button type="button" id="searchRegisterBtn" class="search-register-btn">🔍 Zoek / Registreer</button>
+          </div>
         </div>
+        <div id="searchFeedback" class="search-feedback"></div>
         <div id="wikiContainer">
           <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de officiële database te raadplegen.</p>
         </div>
@@ -282,6 +317,9 @@
       const searchInput = document.getElementById('searchInput');
       if (searchInput) searchInput.addEventListener('input', filterWiki);
 
+      const searchRegisterBtn = document.getElementById('searchRegisterBtn');
+      if (searchRegisterBtn) searchRegisterBtn.addEventListener('click', handleSearchAndRegister);
+
       const fieldForm = document.getElementById('fieldForm');
       if (fieldForm) fieldForm.addEventListener('submit', handleFormSubmit);
 
@@ -299,6 +337,9 @@
     function filterWiki() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const container = document.getElementById('wikiContainer');
+      const feedbackBox = document.getElementById('searchFeedback');
+      if (feedbackBox) feedbackBox.style.display = 'none';
+
       if (!globalPlantData.length) return;
       if (!query) {
         container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven...</p>';
@@ -326,7 +367,60 @@
             </div>`;
         }
       });
-      container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
+      container.innerHTML = html || '<p>Geen resultaten gevonden in de database. Klik op "Zoek / Registreer" om deze term door te sturen.</p>';
+    }
+
+    // --- FUNCTIE: ZOEK & REGISTREER KNOP ---
+    function handleSearchAndRegister() {
+      const query = document.getElementById('searchInput').value.trim();
+      const feedbackBox = document.getElementById('searchFeedback');
+      const container = document.getElementById('wikiContainer');
+
+      if (!query) {
+        alert("Typ eerst een kruidnaam in om te zoeken of te registreren.");
+        return;
+      }
+
+      // Check of het in de lokale wiki voorkomt
+      let found = false;
+      if (globalPlantData.length > 0) {
+        found = globalPlantData.some(item => {
+          let soort = String(item.Soortnaam || item.soort || '').toLowerCase();
+          let latijn = String(item['Latijnse naam'] || item.latijnseNaam || '').toLowerCase();
+          return soort.includes(query.toLowerCase()) || latijn.includes(query.toLowerCase());
+        });
+      }
+
+      if (found) {
+        feedbackBox.style.display = 'none';
+        filterWiki(); // Toon direct het resultaat via de normale filterfunctie
+      } else {
+        // Niet gevonden -> Toon melding en verstuur naar Google Sheets
+        container.innerHTML = '';
+        feedbackBox.style.display = 'block';
+        feedbackBox.innerHTML = `🔍 Geen direct resultaat gevonden voor '<strong>${query}</strong>'. Uw zoekopdracht is geregistreerd, we gaan dit kruid binnenkort toevoegen aan de database!`;
+
+        stuurGemisteZoekopdrachtNaarSheet(query);
+      }
+    }
+
+    async function stuurGemisteZoekopdrachtNaarSheet(zoekterm) {
+      try {
+        const payload = {
+          action: "gemisteZoekopdracht",
+          kruidsoort: zoekterm,
+          timestamp: new Date().toLocaleString('nl-NL')
+        };
+
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.error("Fout bij verzenden gemiste zoekopdracht:", e);
+      }
     }
 
     // --- FUNCTIE: CACHE & NAVIGATIE BEHEER ---
@@ -375,7 +469,6 @@
       if (!val) return 0;
       let str = String(val).trim();
       
-      // Probeer Nederlands formaat (DD-MM-YYYY HH:mm:ss of DD-MM-YYYY)
       let parts = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
       if (parts) {
         let day = parseInt(parts[1], 10);
@@ -388,7 +481,6 @@
         if (!isNaN(d.getTime())) return d.getTime();
       }
 
-      // Probeer standaard ISO / Engelse parse
       let d2 = new Date(str);
       if (!isNaN(d2.getTime())) return d2.getTime();
       
@@ -424,14 +516,12 @@
         let headerRow = logboek[0];
         let dataRows = logboek.slice(1);
 
-        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan)
         dataRows.sort((a, b) => {
           let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
           let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
           return timeB - timeA;
         });
 
-        // 1. Bouw de gesorteerde ruwe tabel
         logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
         
         logboekenHtml += `<tr>`;
@@ -454,7 +544,6 @@
         });
         logboekenHtml += `</table></div>`;
 
-        // 2. Bouw de kaarten voor de opmerkingen tab
         let parsedRows = [];
         dataRows.forEach(row => {
           let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
@@ -474,13 +563,9 @@
           if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
           if (!vak || vak.includes('HTMLElement')) vak = 'K1';
 
-          if (notitie.startsWith('http')) {
-            notitie = '';
-          }
+          if (notitie.startsWith('http')) notitie = '';
 
-          if (!notitie && (!foto || !foto.startsWith('http'))) {
-            return;
-          }
+          if (!notitie && (!foto || !foto.startsWith('http'))) return;
 
           parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
         });
@@ -538,47 +623,4 @@
 
       if (file) {
         const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = function(e) {
-          const img = new Image();
-          img.src = e.target.result;
-          img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let w = img.width, h = img.height;
-            const max = 1200;
-            if (w > h && w > max) { h *= max / w; w = max; }
-            else if (h > max) { w *= max / h; h = max; }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            payload.fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-            sendPayload(payload, submitBtn);
-          };
-        };
-      } else {
-        sendPayload(payload, submitBtn);
-      }
-    }
-
-    // --- FUNCTIE: VERSTUREN NAAR GOOGLE APPS SCRIPT ---
-    function sendPayload(payload, submitBtn) {
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(res => {
-        alert('Inzending succesvol verstuurd met schone foto-link!');
-        document.getElementById('fieldForm').reset();
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Inzending Versturen';
-        switchTab('wiki', document.querySelector('.nav-btn'));
-      })
-      .catch(err => {
-        alert('Fout bij verzenden: ' + err);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Inzending Versturen';
-      });
-    }
-  </script>
-</body>
-</html>
+        reader.readAsDataURL(file
