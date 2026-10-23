@@ -1,584 +1,253 @@
-<!-- ============================================================
-   Project: Kruidenhoek Dashboard — Stadslandbouw Arnhem
-   Versie: 22-10-2026-1405 (Wiki AI Determinatie-knop)
-   Omschrijving: Frontend met 50-soorten Wiki, veilige Google Sheets 
-                koppeling, robuuste Nederlandse datumparser, 
-                correcte nieuwste-bovenaan sortering en AI
-                determinatie-knop onder de Wiki-titel.
-   ============================================================ -->
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kruidenhoek Dashboard — Stadslandbouw Arnhem (V3.9)</title>
-  <style>
-    :root {
-      --primary: #2e7d32;
-      --primary-light: #e8f5e9;
-      --accent: #ff8f00;
-      --bg: #f4f6f5;
-      --text: #333;
-      --card-bg: #fff;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 12px;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    h1 { margin: 0; font-size: 1.3rem; }
-    
-    .nav-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      margin-bottom: 15px;
-    }
-    .nav-btn {
-      padding: 12px 8px;
-      text-align: center;
-      background: #e0e0e0;
-      color: #333;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-    .nav-btn.active {
-      background: var(--primary);
-      color: white;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadslandbouw Arnhem - Compost & Kruiden Beheer</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #1b5e20;
+            --bg-color: #f4f6f4;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 8px;
+        }
 
-    .card {
-      background: var(--card-bg);
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    h2 { font-size: 1.1rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--primary-light); padding-bottom: 6px; }
-    
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+        * { box-sizing: border-box; }
 
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 0.85rem; }
-    input[type="text"], select, textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 1rem;
-    }
-    textarea { resize: vertical; height: 90px; }
-    
-    .submit-btn, .action-btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 12px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
-    .action-btn { margin-bottom: 15px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            overflow-x: hidden;
+        }
 
-    .ai-wiki-btn {
-      display: block;
-      background: var(--primary-light);
-      color: var(--primary);
-      border: 1.5px solid var(--primary);
-      padding: 10px 12px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: bold;
-      text-align: center;
-      margin-top: 8px;
-      margin-bottom: 15px;
-      transition: background 0.2s ease;
-    }
-    .ai-wiki-btn:hover {
-      background: var(--primary);
-      color: white;
-    }
+        .container {
+            max-width: 950px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 5px;
+        }
 
-    .plant-card {
-      background: #fafafa;
-      border: 1px solid #d0e1d4;
-      border-left: 5px solid var(--primary);
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 12px;
-      word-break: break-word;
-    }
-    .plant-title { font-size: 1.15rem; font-weight: bold; color: var(--primary); margin-bottom: 2px; }
-    .plant-subtitle { font-size: 0.85rem; font-style: italic; color: #555; margin-bottom: 8px; }
-    .plant-info-grid { font-size: 0.85rem; display: grid; gap: 6px; margin-bottom: 8px; }
-    
-    .wiki-field { background: #fff; padding: 6px 8px; border-radius: 4px; border: 1px solid #eee; font-size: 0.8rem; margin-top: 4px; }
-    .wiki-field strong { color: #2e7d32; }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-bottom: 15px;
+        }
 
-    .log-entry {
-      background: var(--primary-light);
-      border-left: 4px solid var(--primary);
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 0 6px 6px 0;
-      font-size: 0.85rem;
-    }
+        header h1 { margin: 0 0 5px 0; font-size: 1.5rem; }
+        header p { margin: 0; opacity: 0.9; font-size: 0.85rem; }
 
-    .refresh-bar { text-align: right; margin-bottom: 8px; }
-    .refresh-btn { background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
-  </style>
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--primary-dark);
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 8px;
+        }
+
+        /* Zoekfunctie & Registratie Styling */
+        .search-box-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 180px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .search-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            width: auto;
+            margin-top: 0;
+        }
+
+        .search-btn:hover { background-color: var(--primary-dark); }
+
+        .search-results {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .search-feedback {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+            margin-top: 15px;
+        }
+        button:hover { background-color: var(--primary-dark); }
+    </style>
 </head>
 <body>
 
-  <div class="container">
+<div class="container">
     <header>
-      <h1>Stadslandbouw Arnhem</h1>
-      <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Kruidenhoek Dashboard — V3.9 <span id="headerTimestamp" style="opacity: 0.8;"></span></p>
-      <p id="timestampInfo" style="margin: 2px 0 0 0; font-size: 0.7rem; opacity: 0.85;"></p>
+        <h1>Stadslandbouw Arnhem</h1>
+        <p>Compost & Kruiden Zoekmodule</p>
     </header>
 
-    <div class="nav-tabs">
-      <button class="nav-btn active" data-target="wiki">🔍 Wiki & Zoeken</button>
-      <button class="nav-btn" data-target="opmerkingen">💡 Opmerkingen</button>
-      <button class="nav-btn" data-target="veldinvoer">📝 Veldinvoer</button>
-      <button class="nav-btn" data-target="logboeken">📁 Alle Reacties</button>
-    </div>
-
-    <!-- Tab 1: Wiki & Zoeken -->
-    <div id="wiki" class="tab-content active">
-      <div class="card">
-        <h2>🔍 Planten Wiki Database</h2>
+    <!-- Nieuwe Kruiden Zoek- en Registratie Card -->
+    <div class="card">
+        <h2>🌿 Kruiden Zoeken & Registreren</h2>
+        <p style="font-size: 0.9rem; color: #666;">Typ direct om live te zoeken. Staat het kruid er niet tussen? Klik op de zoekknop om uw invoer automatisch te registreren voor aanvulling:</p>
         
-        <!-- Knop direct onder de titel -->
-        <a href="https://www.plantidentifieronline.com/nl/tools/herb-identifier" target="_blank" rel="noopener noreferrer" class="ai-wiki-btn">
-          🌿 Kruid niet herkend? Bepaal de soort met AI
-        </a>
+        <div class="search-box-container">
+            <input type="text" id="kruidSearchInput" class="search-input" placeholder="Typ kruidsoorten (bijv. Tijm, Munt)...">
+            <button type="button" id="kruidSearchBtn" class="search-btn">🔍 Zoek / Registreer</button>
+        </div>
 
-        <div class="form-group">
-          <input type="text" id="searchInput" placeholder="Typ kruidnaam (bijv. Tijm, Rozemarijn, Munt)...">
-        </div>
-        <div id="wikiContainer">
-          <p style="color: #666; font-style: italic; font-size: 0.9rem;">Typ hierboven een kruidnaam om de officiële database te raadplegen.</p>
-        </div>
-      </div>
+        <div id="searchResults" class="search-results"></div>
+        <div id="searchFeedback" class="search-feedback"></div>
     </div>
 
-    <!-- Tab 2: Opmerkingen -->
-    <div id="opmerkingen" class="tab-content">
-      <div class="card">
-        <div class="refresh-bar"><button class="refresh-btn" onclick="forceRefreshData()">🔄 Vernieuw data</button></div>
-        <h2>💡 Recente Acties & Veldnotities</h2>
-        <div id="loadActionContainer">
-          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Opmerkingen & Reacties</button>
-        </div>
-        <div id="notesContainer"></div>
-      </div>
-    </div>
+</div>
 
-    <!-- Tab 3: Veldinvoer -->
-    <div id="veldinvoer" class="tab-content">
-      <div class="card">
-        <h2>📝 Veldinvoer Formulier</h2>
-        <form id="fieldForm">
-          <div class="form-group">
-            <label for="naam">Je Naam:</label>
-            <input type="text" id="naam" required placeholder="Bijv. Jan">
-          </div>
-          <div class="form-group">
-            <label for="vak">Vak:</label>
-            <select id="vak" required>
-              <option value="">Selecteer een vak...</option>
-              <option value="K1">K1</option>
-              <option value="K2">K2</option>
-              <option value="K3">K3</option>
-              <option value="K4">K4</option>
-              <option value="K5">K5</option>
-              <option value="K6">K6</option>
-              <option value="K7">K7</option>
-              <option value="K8">K8</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="kruidsoort">Kruidensoort:</label>
-            <input type="text" id="kruidsoort" required placeholder="Bijv. Rozemarijn of Tijm">
-          </div>
-          <div class="form-group">
-            <label for="actie">Type Actie / Onderhoud:</label>
-            <select id="actie">
-              <option value="Snoei / Onderhoud">Snoei / Onderhoud</option>
-              <option value="Oogst">Oogst</option>
-              <option value="Water geven">Water geven</option>
-              <option value="Monitoring / Waarneming">Monitoring / Waarneming</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="ziekte">Ziekte of waarneming:</label>
-            <input type="text" id="ziekte" placeholder="Bijv. Geen of Meeldauw">
-          </div>
-          <div class="form-group">
-            <label for="notities">Notities of opmerkingen:</label>
-            <textarea id="notities" placeholder="Typ hier je opmerkingen..."></textarea>
-          </div>
-          <div class="form-group">
-            <label for="foto">Foto (optioneel, max 5MB):</label>
-            <input type="file" id="foto" accept="image/*">
-          </div>
-          <button type="submit" class="submit-btn" id="submitBtn">Inzending Versturen</button>
-        </form>
-      </div>
-    </div>
+<script>
+    // Jouw unieke Google Apps Script Web App URL voor centrale synchronisatie
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxqDLa2yAw2RL_XYewi5UzRCq71lBW4ZZsNLqIBSOlGzT4JaXDi7PQ_c8I6GFK0N3zgng/exec";
 
-    <!-- Tab 4: Alle Reacties -->
-    <div id="logboeken" class="tab-content">
-      <div class="card">
-        <h2>📁 Ruwe Formulier Reacties</h2>
-        <div id="loadActionContainer2">
-          <button class="action-btn" onclick="loadDashboardData()">📥 Laad Alle Reacties</button>
-        </div>
-        <div id="logboekenContainer"></div>
-      </div>
-    </div>
+    // Voorbeeld database van bekende kruiden (of haal dit uit je centrale dataset)
+    const bekendeKruiden = [
+        { naam: "Tijm", vak: "Vak A", functie: "Bodembedekker / Culinair" },
+        { naam: "Munt", vak: "Vak B", functie: "Thee / Sterk woekerend" },
+        { naam: "Rozemarijn", vak: "Vak A", functie: "Heester / Medicinaal" },
+        { naam: "Salie", vak: "Vak C", functie: "Geneeskrachtig" }
+    ];
 
-  </div>
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('kruidSearchInput');
+        const btn = document.getElementById('kruidSearchBtn');
+        const resultsBox = document.getElementById('searchResults');
+        const feedbackBox = document.getElementById('searchFeedback');
 
-  <script>
-    // --- CONFIGURATIE ---
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfqtDc2fGiyDGBM0Cc8HrLJfzxZspdyP572l6e0MVougdNlabXL2VTzYt9xtBuZRZ-dA/exec';
-    let globalPlantData = [];
+        // Live zoeken tijdens typen
+        input.addEventListener('input', function() {
+            const query = input.value.trim().toLowerCase();
+            feedbackBox.style.display = 'none';
 
-    // --- INITIALISATIE & EVENT LISTENERS ---
-    window.addEventListener('DOMContentLoaded', function() {
-      const nowFormatted = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
-      document.getElementById('headerTimestamp').textContent = '(' + nowFormatted + ')';
+            if (query.length === 0) {
+                resultsBox.style.display = 'none';
+                return;
+            }
 
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          switchTab(this.getAttribute('data-target'), this);
+            const matches = bekendeKruiden.filter(k => k.naam.toLowerCase().includes(query) || k.functie.toLowerCase().includes(query));
+            
+            if (matches.length > 0) {
+                resultsBox.style.display = 'block';
+                resultsBox.innerHTML = matches.map(m => `<div><strong>${m.naam}</strong> (${m.vak}) - ${m.functie}</div>`).join('<hr style="margin:5px 0; border:0; border-top:1px solid #ddd;">');
+            } else {
+                resultsBox.style.display = 'block';
+                resultsBox.innerHTML = `<em>Geen direct resultaat in de lijst. Klik op 'Zoek / Registreer' om toe te voegen.</em>`;
+            }
         });
-      });
 
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.addEventListener('input', filterWiki);
+        // Actie bij klikken op de zoek-/registratieknop (ook als er geen Enter is gebruikt)
+        btn.addEventListener('click', function() {
+            const query = input.value.trim();
+            if (!query) {
+                alert("Typ eerst een kruidnaam in.");
+                return;
+            }
 
-      const fieldForm = document.getElementById('fieldForm');
-      if (fieldForm) fieldForm.addEventListener('submit', handleFormSubmit);
+            const matches = bekendeKruiden.filter(k => k.naam.toLowerCase().includes(query.toLowerCase()));
 
-      // Laad kruideninfo.json voor wiki
-      fetch('kruideninfo.json')
-        .then(response => response.json())
-        .then(data => {
-          globalPlantData = data;
-          document.getElementById('timestampInfo').textContent = 'Wiki geladen uit GitHub (' + data.length + ' soorten)';
-        })
-        .catch(err => console.error('Fout bij laden kruideninfo.json:', err));
+            if (matches.length > 0) {
+                resultsBox.style.display = 'block';
+                resultsBox.innerHTML = matches.map(m => `<div><strong>${m.naam}</strong> (${m.vak}) - ${m.functie}</div>`).join('');
+                feedbackBox.style.display = 'none';
+            } else {
+                resultsBox.style.display = 'none';
+                feedbackBox.style.display = 'block';
+                feedbackBox.innerHTML = `🔍 Geen direct resultaat gevonden voor '<strong>${query}</strong>'. Uw zoekopdracht is geregistreerd, we gaan dit kruid binnenkort toevoegen aan de database!`;
+
+                // Verstuur naar Google Apps Script backend
+                stuurGemisteZoekopdrachtNaarSheet(query);
+            }
+        });
     });
 
-    // --- FUNCTIE: WIKI & ZOEKFILTER ---
-    function filterWiki() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      const container = document.getElementById('wikiContainer');
-      if (!globalPlantData.length) return;
-      if (!query) {
-        container.innerHTML = '<p style="color: #666; font-style: italic; font-size: 0.85rem;">Typ een kruidnaam hierboven...</p>';
-        return;
-      }
-      let html = '';
-      globalPlantData.forEach(item => {
-        let soort = String(item.Soortnaam || item.soort || '');
-        let latijn = String(item['Latijnse naam'] || item.latijnseNaam || '');
-        
-        if (soort.toLowerCase().includes(query) || latijn.toLowerCase().includes(query)) {
-          let detailsHtml = '';
-          for (let key in item) {
-            if (key === 'Soortnaam' || key === 'Latijnse naam' || key === 'soort' || key === 'latijnseNaam' || !item[key]) continue;
-            detailsHtml += `<div class="wiki-field"><strong>${key}:</strong> ${item[key]}</div>`;
-          }
+    async function stuurGemisteZoekopdrachtNaarSheet(zoekterm) {
+        try {
+            let payload = {
+                action: "gemisteZoekopdracht",
+                namedValues: {
+                    kruidsoort: zoekterm,
+                    timestamp: new Date().toISOString()
+                }
+            };
 
-          html += `
-            <div class="plant-card">
-              <div class="plant-title">🌿 ${soort}</div>
-              ${latijn ? `<div class="plant-subtitle">${latijn}</div>` : ''}
-              <div class="plant-info-grid">
-                ${detailsHtml}
-              </div>
-            </div>`;
-        }
-      });
-      container.innerHTML = html || '<p>Geen resultaten gevonden.</p>';
-    }
-
-    // --- FUNCTIE: CACHE & NAVIGATIE BEHEER ---
-    function forceRefreshData() {
-      sessionStorage.clear();
-      document.getElementById('notesContainer').innerHTML = '';
-      document.getElementById('logboekenContainer').innerHTML = '';
-      showLoadButtons();
-      alert('Cache gewist.');
-    }
-
-    function hideLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-      });
-    }
-
-    function showLoadButtons() {
-      ['loadActionContainer', 'loadActionContainer2'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) el.style.display = 'block';
-      });
-    }
-
-    function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      if (btn) btn.classList.add('active');
-    }
-
-    // --- FUNCTIE: DATA LADEN UIT GOOGLE SHEETS ---
-    function loadDashboardData() {
-      fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
-          displayLogs(data);
-          hideLoadButtons();
-        })
-        .catch(err => alert('Fout bij laden data: ' + err));
-    }
-
-    // --- ROBUUSTE DATUM PARSER ---
-    function getTimestamp(val) {
-      if (!val) return 0;
-      let str = String(val).trim();
-      
-      // Probeer Nederlands formaat (DD-MM-YYYY HH:mm:ss of DD-MM-YYYY)
-      let parts = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-      if (parts) {
-        let day = parseInt(parts[1], 10);
-        let month = parseInt(parts[2], 10) - 1;
-        let year = parseInt(parts[3], 10);
-        let hour = parts[4] ? parseInt(parts[4], 10) : 0;
-        let min = parts[5] ? parseInt(parts[5], 10) : 0;
-        let sec = parts[6] ? parseInt(parts[6], 10) : 0;
-        let d = new Date(year, month, day, hour, min, sec);
-        if (!isNaN(d.getTime())) return d.getTime();
-      }
-
-      // Probeer standaard ISO / Engelse parse
-      let d2 = new Date(str);
-      if (!isNaN(d2.getTime())) return d2.getTime();
-      
-      return 0;
-    }
-
-    // --- FUNCTIE: LOGBOEKEN & SORTERING (NIEUWSTE BOVEN) ---
-    function displayLogs(plantData) {
-      const notesContainer = document.getElementById('notesContainer');
-      const logboekenContainer = document.getElementById('logboekenContainer');
-      let allNotesHtml = '', logboekenHtml = '';
-
-      plantData.forEach(source => {
-        let logboek = source.logboek;
-        if (!logboek || !logboek.length) return;
-
-        let headers = logboek[0].map(h => String(h).trim().toLowerCase());
-        
-        let skipIndices = [];
-        headers.forEach((h, idx) => {
-          if (h.includes('foutcode') || h.includes('waarschuwing')) {
-            skipIndices.push(idx);
-          }
-        });
-
-        let idxDatum = headers.findIndex(h => h.includes('timestamp') || h.includes('datum'));
-        let idxNaam = headers.findIndex(h => h.includes('naam'));
-        let idxVak = headers.findIndex(h => h === 'vak' || h.includes('vak'));
-        let idxKruid = headers.findIndex(h => h.includes('kruid') || h.includes('plant'));
-        let idxNotitie = headers.findIndex(h => h.includes('notitie') || h.includes('opmerking'));
-        let idxFoto = headers.findIndex(h => h.includes('foto') || h.includes('url'));
-
-        let headerRow = logboek[0];
-        let dataRows = logboek.slice(1);
-
-        // Sorteer datarijen aflopend (nieuwste timestamp bovenaan)
-        dataRows.sort((a, b) => {
-          let timeA = idxDatum > -1 ? getTimestamp(a[idxDatum]) : getTimestamp(a[0]);
-          let timeB = idxDatum > -1 ? getTimestamp(b[idxDatum]) : getTimestamp(b[0]);
-          return timeB - timeA;
-        });
-
-        // 1. Bouw de gesorteerde ruwe tabel
-        logboekenHtml += `<div style="overflow-x: auto;"><table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.75rem;">`;
-        
-        logboekenHtml += `<tr>`;
-        headerRow.forEach((cell, cellIdx) => {
-          if (skipIndices.includes(cellIdx)) return;
-          let val = cell !== null ? String(cell) : '';
-          logboekenHtml += `<th style="background: #e8f5e9; padding: 4px;">${val}</th>`;
-        });
-        logboekenHtml += `</tr>`;
-
-        dataRows.forEach((row) => {
-          logboekenHtml += `<tr>`;
-          row.forEach((cell, cellIdx) => {
-            if (skipIndices.includes(cellIdx)) return;
-            let val = cell !== null ? String(cell) : '';
-            if (val.startsWith('http')) val = `<a href="${val}" target="_blank">🔗 Bekijk foto</a>`;
-            logboekenHtml += `<td style="padding: 4px;">${val}</td>`;
-          });
-          logboekenHtml += `</tr>`;
-        });
-        logboekenHtml += `</table></div>`;
-
-        // 2. Bouw de kaarten voor de opmerkingen tab
-        let parsedRows = [];
-        dataRows.forEach(row => {
-          let datum = idxDatum > -1 ? row[idxDatum] : row[0] || '';
-          let naam = idxNaam > -1 && row[idxNaam] ? String(row[idxNaam]).trim() : '';
-          let vak = idxVak > -1 && row[idxVak] ? String(row[idxVak]).trim() : '';
-          let kruid = idxKruid > -1 && row[idxKruid] ? String(row[idxKruid]).trim() : '';
-          let notitie = idxNotitie > -1 && row[idxNotitie] ? String(row[idxNotitie]).trim() : '';
-          let foto = idxFoto > -1 && row[idxFoto] ? String(row[idxFoto]).trim() : '';
-
-          if (!foto || !foto.startsWith('http')) {
-            row.forEach(cell => {
-              let c = cell !== null && typeof cell === 'string' ? cell.trim() : '';
-              if (c.startsWith('http://') || c.startsWith('https://')) foto = c;
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ action: "gemisteZoekopdracht", kruidsoort: zoekterm })
             });
-          }
-
-          if (!naam || naam.startsWith('http') || /^K[1-8]$/i.test(naam)) naam = 'Stadslandbouw';
-          if (!vak || vak.includes('HTMLElement')) vak = 'K1';
-
-          if (notitie.startsWith('http')) {
-            notitie = '';
-          }
-
-          if (!notitie && (!foto || !foto.startsWith('http'))) {
-            return;
-          }
-
-          parsedRows.push({ datum, naam, vak, kruid, notitie, foto });
-        });
-
-        parsedRows.forEach(item => {
-          let fotoHtml = item.foto && item.foto.startsWith('http') ? `<div style="margin-top: 4px;"><a href="${item.foto}" target="_blank" style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: 1px solid #c8e6c9;">📷 Bekijk foto</a></div>` : '';
-          
-          let inhoudHtml = '';
-          if (item.kruid && item.notitie) {
-            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong> | Notitie: ${item.notitie}</div>`;
-          } else if (item.kruid) {
-            inhoudHtml = `<div>Kruid: <strong>${item.kruid}</strong></div>`;
-          } else if (item.notitie) {
-            inhoudHtml = `<div>Notitie: ${item.notitie}</div>`;
-          }
-
-          allNotesHtml += `
-            <div class="log-entry">
-              <strong>👤 ${item.naam}</strong> <span style="font-size: 0.75rem; color: #555;">(Vak: ${item.vak} - ${String(item.datum).substring(0, 16)})</span><br>
-              ${inhoudHtml}
-              ${fotoHtml}
-            </div>`;
-        });
-      });
-
-      notesContainer.innerHTML = allNotesHtml || '<p>Geen opmerkingen of acties met foto\'s.</p>';
-      logboekenContainer.innerHTML = logboekenHtml;
+        } catch (e) {
+            console.error("Fout bij verzenden gemiste zoekopdracht:", e);
+        }
     }
+</script>
 
-    // --- FUNCTIE: FORMULIER VERSTUREN & CLIENT-SIDE COMPRESSIE ---
-    function handleFormSubmit(event) {
-      event.preventDefault();
-      const submitBtn = document.getElementById('submitBtn');
-      const fileInput = document.getElementById('foto');
-      const file = fileInput.files[0];
-      const selectedVak = document.getElementById('vak').value;
-
-      if (file && file.size > 5 * 1024 * 1024) {
-        alert('Foto is groter dan 5MB.');
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = file ? 'Foto comprimeren & verzenden...' : 'Inzending verzenden...';
-
-      const payload = {
-        naam: document.getElementById('naam').value,
-        vak: selectedVak,
-        kruidsoort: document.getElementById('kruidsoort').value,
-        actie: document.getElementById('actie').value,
-        ziekte: document.getElementById('ziekte').value,
-        notities: document.getElementById('notities').value,
-        fotoBase64: ''
-      };
-
-      if (file) {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = function(e) {
-          const img = new Image();
-          img.src = e.target.result;
-          img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let w = img.width, h = img.height;
-            const max = 1200;
-            if (w > h && w > max) { h *= max / w; w = max; }
-            else if (h > max) { w *= max / h; h = max; }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            payload.fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-            sendPayload(payload, submitBtn);
-          };
-        };
-      } else {
-        sendPayload(payload, submitBtn);
-      }
-    }
-
-    // --- FUNCTIE: VERSTUREN NAAR GOOGLE APPS SCRIPT ---
-    function sendPayload(payload, submitBtn) {
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(res => {
-        alert('Inzending succesvol verstuurd met schone foto-link!');
-        document.getElementById('fieldForm').reset();
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Inzending Versturen';
-        switchTab('wiki', document.querySelector('.nav-btn'));
-      })
-      .catch(err => {
-        alert('Fout bij verzenden: ' + err);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Inzending Versturen';
-      });
-    }
-  </script>
 </body>
 </html>
